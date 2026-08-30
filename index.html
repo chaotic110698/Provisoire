@@ -4,25 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="Roue de fortune interactive : créez vos résultats, organisez-les par catégories colorées, lancez la roue. 100% hors-ligne, un seul fichier.">
+<meta name="description" content="Roue de fortune interactive : plusieurs roues, resultats ponderes, tirage sans remise, categories colorees, quatre styles. 100% hors-ligne, un seul fichier.">
 <title>Roue de Fortune</title>
 
-<!-- Applique le thème AVANT le premier rendu pour éviter tout clignotement. -->
+<!-- Applique le theme AVANT le premier rendu pour eviter tout clignotement. -->
 <script>
 (function () {
   try {
-    var s = JSON.parse(localStorage.getItem('roue-fortune-v1') || '{}');
+    var s = JSON.parse(localStorage.getItem('roue-fortune-v2')
+                    || localStorage.getItem('roue-fortune-v1') || '{}');
     var r = document.documentElement;
     r.setAttribute('data-skin', s.skin || 'blanc');
+    if (s.lang === 'en' || s.lang === 'fr') r.setAttribute('lang', s.lang);
     var dark = (typeof s.dark === 'boolean')
       ? s.dark
       : window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (dark) r.setAttribute('data-mode', 'dark');
-  } catch (e) { /* localStorage indisponible : on garde les valeurs par défaut */ }
+  } catch (e) { /* localStorage indisponible : on garde les valeurs par defaut */ }
 })();
 </script>
 
 <style>
+
 /* ==========================================================================
    ROUE DE FORTUNE - feuille de style unique
    1. Reset & jetons (tokens)      5. Onglet « Gestion »
@@ -640,58 +643,194 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     transition-duration: .01ms !important;
   }
 }
+
+/* 8 ------------------- Ajouts : profils, poids, tri, présentation ------------------- */
+
+/* Bandeau d'alerte (stockage indisponible) */
+.banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; margin-bottom: 16px;
+  border: 1px solid var(--border-strong); border-left: 5px solid var(--danger);
+  border-radius: var(--radius-sm); background: var(--panel-2);
+  font-size: 13.5px; line-height: 1.5;
+}
+.banner .btn { margin-left: auto }
+
+/* Sélecteur de profil, dans la barre latérale */
+.profile-row { display: flex; gap: 6px }
+.profile-row select {
+  flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 10px;
+  border-radius: var(--radius-sm); border: 1px solid rgba(128, 128, 128, .35);
+  background: rgba(128, 128, 128, .10); color: inherit; font-weight: 700; font-size: 13.5px;
+}
+.profile-row .icon-btn { width: 44px; border: 1px solid rgba(128, 128, 128, .35) }
+.profile-row .icon-btn:hover { background: rgba(128, 128, 128, .18) }
+
+/* Choix de la langue */
+.langs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px }
+.lang {
+  min-height: 40px; border-radius: var(--radius-sm); color: inherit;
+  border: 1px solid rgba(128, 128, 128, .35); font-weight: 700; font-size: 12.5px;
+}
+.lang:hover { background: rgba(128, 128, 128, .16) }
+.lang[aria-pressed="true"] { background: rgba(128, 128, 128, .22); border-color: currentColor }
+
+/* Réglages de la roue (onglet Gestion) */
+.opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px }
+.opt { display: flex; align-items: flex-start; gap: 11px; cursor: pointer }
+.opt .cb { margin-top: 2px }
+.opt b { display: block; font-size: 14px }
+.opt span { font-size: 12.5px; color: var(--muted); line-height: 1.45 }
+
+/* Recherche */
+.field-pair { display: flex; gap: 10px; min-width: 0 }
+.field-pair .field { flex: 1 1 0 }
+
+.search-wrap { position: relative; flex: 1 1 220px; min-width: 160px }
+.search-wrap .input { padding-left: 36px }
+.search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); opacity: .55; pointer-events: none }
+.search-clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 8px }
+.search-clear:hover { background: var(--panel-3) }
+
+/* Ligne résultat enrichie : tri, poids */
+.res { flex-wrap: wrap }
+.reorder { display: flex; flex-direction: column; flex: 0 0 auto; gap: 2px }
+.reorder button {
+  width: 30px; height: 22px; border-radius: 6px; line-height: 1;
+  font-size: 11px; color: var(--fg); opacity: .55;
+  border: 1px solid var(--border); background: var(--panel-2);
+}
+.reorder button:hover:not(:disabled) { opacity: 1; background: var(--panel-3) }
+.reorder button:disabled { opacity: .18; cursor: default; background: transparent; border-color: transparent }
+.weight {
+  flex: 0 0 auto; width: 62px; min-height: 40px; padding: 6px 4px 6px 8px;
+  text-align: center; font-weight: 700; font-variant-numeric: tabular-nums;
+  border-radius: 8px; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--fg);
+}
+.weight:disabled { opacity: .45 }
+/* Un poids supérieur à 1 se repère d'un coup d'œil dans la liste. */
+.weight.w-on { border-color: var(--accent-2); color: var(--accent-2); border-width: 2px }
+
+/* Légende, au-delà de 40 résultats */
+.legend { margin-top: 4px }
+.legend ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 14px }
+.legend li { display: flex; align-items: center; gap: 7px; font-size: 12.5px; padding: 3px 0 }
+.legend .n {
+  flex: 0 0 auto; min-width: 22px; text-align: right; font-weight: 800;
+  font-variant-numeric: tabular-nums; color: var(--muted);
+}
+.legend .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+
+/* Toast avec action (annulation) */
+.toast { display: flex; align-items: center; gap: 12px; justify-content: center }
+.toast .toast-act {
+  flex: 0 0 auto; padding: 5px 12px; border-radius: 999px; font-weight: 800; font-size: 12.5px;
+  background: var(--bg); color: var(--fg); border: 1px solid var(--fg);
+}
+.toast .toast-act:hover { filter: brightness(1.15) }
+
+/* Mode présentation */
+.wheel-bar { display: flex; justify-content: flex-end; width: 100%; margin-bottom: -6px }
+body.presenting .sidebar,
+body.presenting .topbar,
+body.presenting .scrim,
+body.presenting .result-panel .mini,
+body.presenting .spin-hint { display: none !important }
+body.presenting .main { padding: 8px 12px }
+body.presenting .roue-layout { grid-template-columns: 1fr; gap: 8px; place-items: center }
+body.presenting .wheel-panel { gap: 10px }
+/* La roue, le bouton et le résultat doivent tenir ensemble dans la hauteur visible. */
+body.presenting .wheel-stage { width: min(88vw, min(54vh, 560px)) }
+body.presenting .result-card { min-height: 0; padding: 14px; width: min(100%, 760px) }
+body.presenting .result-title { font-size: clamp(26px, 6vw, 50px) }
+body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
+
+/* Repli mobile : la ligne se scinde pour garder des cibles de 44 px */
+@media (max-width: 640px) {
+  .res-main { flex: 1 1 100% ; order: -1 }
+  .res { row-gap: 2px; padding-bottom: 8px }
+  .legend ol { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) }
+}
+
+/* 9 ------------------------- Impression ------------------------- */
+@media print {
+  .sidebar, .topbar, .scrim, .toast, #confetti, .modal-backdrop,
+  .spin-btn, .spin-hint, .hub, .present-btn, .toolbar, .banner,
+  #createForm, .opts, .mini-head .btn, .reorder, .icon-btn, .cb-wrap { display: none !important }
+  body { background: #fff !important; color: #000 !important }
+  .main { padding: 0 }
+  .card, .cat { box-shadow: none !important; border: 1px solid #bbb !important; background: #fff !important; break-inside: avoid }
+  .roue-layout { grid-template-columns: 1fr !important }
+  .result-title, .page-title, .cat-name { color: #000 !important }
+  .res-desc, .result-desc, .page-sub, .stat-n { color: #444 !important }
+  .cat-head { background: #f2f2f2 !important }
+  .wheel-stage { width: 12cm !important; margin: 0 auto }
+  a[href]::after { content: "" }
+}
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Aller au contenu</a>
+<a class="skip-link" href="#main" data-i18n="skip">Aller au contenu</a>
 
 <!-- Barre supérieure (mobile uniquement) -->
 <header class="topbar">
-  <button class="icon-btn" id="burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="sidebar">&#9776;</button>
-  <span class="title">Roue de Fortune</span>
+  <button class="icon-btn" id="burger" data-i18n-al="openMenu" aria-expanded="false" aria-controls="sidebar">&#9776;</button>
+  <span class="title" data-i18n="appName">Roue de Fortune</span>
 </header>
 
 <div class="app">
 
   <!-- ============ Barre latérale ============ -->
-  <aside class="sidebar" id="sidebar" aria-label="Navigation principale">
-    <div class="brand"><span class="logo" aria-hidden="true">&#127920;</span> Roue de Fortune</div>
+  <aside class="sidebar" id="sidebar" data-i18n-al="mainNav">
+    <div class="brand"><span class="logo" aria-hidden="true">&#127920;</span> <span data-i18n="appName">Roue de Fortune</span></div>
+
+    <div class="side-group">
+      <span class="side-label" id="lbl-profile" data-i18n="profileLabel">Roue</span>
+      <div class="profile-row">
+        <select id="profileSel" data-i18n-al="profileLabel"></select>
+        <button class="icon-btn" id="profileMenu" data-i18n-al="manageProfiles">&#8942;</button>
+      </div>
+    </div>
 
     <nav class="side-group">
-      <span class="side-label" id="lbl-nav">Navigation</span>
+      <span class="side-label" id="lbl-nav" data-i18n="navLabel">Navigation</span>
       <div class="tabs" role="tablist" aria-labelledby="lbl-nav">
         <button class="tab" role="tab" id="tab-roue" aria-controls="panel-roue" aria-selected="true" data-tab="roue">
-          <span class="ico" aria-hidden="true">&#127920;</span> Roue
+          <span class="ico" aria-hidden="true">&#127920;</span> <span data-i18n="tabWheel">Roue</span>
         </button>
         <button class="tab" role="tab" id="tab-gestion" aria-controls="panel-gestion" aria-selected="false" tabindex="-1" data-tab="gestion">
-          <span class="ico" aria-hidden="true">&#9881;</span> Gestion
+          <span class="ico" aria-hidden="true">&#9881;</span> <span data-i18n="tabManage">Gestion</span>
         </button>
       </div>
     </nav>
 
     <div class="side-group">
-      <span class="side-label" id="lbl-skin">Style</span>
+      <span class="side-label" id="lbl-skin" data-i18n="styleLabel">Style</span>
       <div class="skins" role="group" aria-labelledby="lbl-skin">
-        <button class="skin" data-s="casino" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Casino</button>
-        <button class="skin" data-s="feutre" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Feutré</button>
-        <button class="skin" data-s="blanc" aria-pressed="true"><span class="swatch" aria-hidden="true"></span>Blanc</button>
-        <button class="skin" data-s="velours" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Velours</button>
+        <button class="skin" data-s="casino" aria-pressed="false"><span class="swatch" aria-hidden="true"></span><span data-i18n="skinCasino">Casino</span></button>
+        <button class="skin" data-s="feutre" aria-pressed="false"><span class="swatch" aria-hidden="true"></span><span data-i18n="skinFeutre">Feutré</span></button>
+        <button class="skin" data-s="blanc" aria-pressed="true"><span class="swatch" aria-hidden="true"></span><span data-i18n="skinBlanc">Blanc</span></button>
+        <button class="skin" data-s="velours" aria-pressed="false"><span class="swatch" aria-hidden="true"></span><span data-i18n="skinVelours">Velours</span></button>
       </div>
     </div>
 
     <div class="side-group">
-      <span class="side-label">Préférences</span>
+      <span class="side-label" data-i18n="prefsLabel">Préférences</span>
       <button class="switch" id="toggleDark" aria-pressed="false">
-        <span><span aria-hidden="true">&#127769;</span> Mode nuit</span><span class="track" aria-hidden="true"></span>
+        <span><span aria-hidden="true">&#127769;</span> <span data-i18n="darkMode">Mode nuit</span></span><span class="track" aria-hidden="true"></span>
       </button>
       <button class="switch" id="toggleSound" aria-pressed="true">
-        <span><span aria-hidden="true">&#128266;</span> Sons</span><span class="track" aria-hidden="true"></span>
+        <span><span aria-hidden="true">&#128266;</span> <span data-i18n="sounds">Sons</span></span><span class="track" aria-hidden="true"></span>
       </button>
+      <div class="langs" role="group" data-i18n-al="langLabel">
+        <button class="lang" data-l="fr" aria-pressed="true">Français</button>
+        <button class="lang" data-l="en" aria-pressed="false">English</button>
+      </div>
     </div>
 
     <div class="side-foot">
-      <b id="sideCount">0</b> résultat(s) actif(s)<br>
-      <span id="sideCats">0 catégorie(s)</span>
+      <b id="sideCount">0</b> <span id="sideCountLbl"></span><br>
+      <span id="sideCats"></span>
     </div>
   </aside>
 
@@ -700,12 +839,21 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
   <!-- ============ Zone principale ============ -->
   <main class="main" id="main">
 
+    <div class="banner" id="storageWarn" hidden>
+      <span aria-hidden="true">&#9888;</span>
+      <span data-i18n="storageWarn">Le stockage local est indisponible : vos modifications ne seront pas conservées après fermeture de l'onglet.</span>
+      <button class="btn sm ghost" id="dismissWarn" data-i18n="dismiss">Masquer</button>
+    </div>
+
     <!-- ---------- Onglet 1 : la roue ---------- -->
     <section id="panel-roue" role="tabpanel" aria-labelledby="tab-roue" tabindex="-1">
       <div class="roue-layout">
 
-        <!-- Moitié haute : la roue -->
         <div class="wheel-panel">
+          <div class="wheel-bar">
+            <button class="btn sm ghost" id="presentBtn"><span aria-hidden="true">&#9974;</span> <span id="presentLbl" data-i18n="present">Présentation</span></button>
+          </div>
+
           <div class="wheel-stage">
             <div class="pointer" aria-hidden="true">
               <svg viewBox="0 0 34 42"><path class="p-edge" d="M17 42 2 8a15 15 0 0 1 30 0Z"></path><path class="p-fill" d="M17 39 4.5 7.5a13 13 0 0 1 25 0Z"></path></svg>
@@ -713,7 +861,7 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
             <div class="rotor" id="rotor">
               <svg viewBox="0 0 100 100" role="img" aria-labelledby="wheelDesc">
-                <title id="wheelDesc">Roue des résultats actifs</title>
+                <title id="wheelDesc" data-i18n="wheelAria">Roue des résultats actifs</title>
                 <defs>
                   <radialGradient id="gloss" cx="34%" cy="26%" r="74%">
                     <stop offset="0%" stop-color="#fff" stop-opacity=".6"></stop>
@@ -729,37 +877,44 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
               </svg>
             </div>
 
-            <button class="hub" id="hubBtn" title="Lancer la roue" aria-label="Lancer la roue">GO</button>
+            <button class="hub" id="hubBtn" data-i18n-al="spinAria">GO</button>
           </div>
 
-          <button class="btn primary spin-btn" id="spinBtn"><span aria-hidden="true">&#127919;</span> Lancer</button>
-          <p class="spin-hint">Astuce : la touche <kbd>Entrée</kbd> lance aussi la roue.</p>
+          <button class="btn primary spin-btn" id="spinBtn"><span aria-hidden="true">&#127919;</span> <span data-i18n="spin">Lancer</span></button>
+          <p class="spin-hint"><span data-i18n="spinHintA">Astuce : la touche</span> <kbd data-i18n="enterKey">Entrée</kbd> <span data-i18n="spinHintB">lance aussi la roue.</span></p>
         </div>
 
-        <!-- Moitié basse : le résultat -->
         <div class="result-panel" style="display:flex;flex-direction:column;gap:14px">
           <div class="card result-card" id="resultCard" role="status" aria-live="polite">
             <span class="glow" aria-hidden="true"></span>
-            <p class="result-kicker">Résultat</p>
+            <p class="result-kicker" data-i18n="resultKicker">Résultat</p>
             <h2 class="result-title" id="resultTitle">&mdash;</h2>
-            <p class="result-desc" id="resultDesc">Lancez la roue pour découvrir votre résultat.</p>
+            <p class="result-desc" id="resultDesc"></p>
             <span class="result-tag" id="resultTag" hidden><span class="dot" id="resultDot"></span><span id="resultCat"></span></span>
+          </div>
+
+          <div class="card mini legend" id="legendCard" hidden>
+            <div class="mini-head"><h3 data-i18n="legendTitle">Légende</h3></div>
+            <ol id="legendList"></ol>
           </div>
 
           <div class="card mini">
             <div class="mini-head">
-              <h3>Historique</h3>
-              <button class="btn sm ghost" id="clearHist">Vider</button>
+              <h3 data-i18n="historyTitle">Historique</h3>
+              <span style="display:flex;gap:6px">
+                <button class="btn sm ghost" id="exportHist" data-i18n="export">Exporter</button>
+                <button class="btn sm ghost" id="clearHist" data-i18n="clear">Vider</button>
+              </span>
             </div>
             <ol class="hist" id="histList"></ol>
           </div>
 
           <div class="card mini">
             <div class="mini-head">
-              <h3>Statistiques</h3>
-              <button class="btn sm ghost" id="clearStats">Remettre à zéro</button>
+              <h3 data-i18n="statsTitle">Statistiques</h3>
+              <button class="btn sm ghost" id="clearStats" data-i18n="resetZero">Remettre à zéro</button>
             </div>
-            <p class="stat-n" id="statTotal">Aucun tirage pour le moment.</p>
+            <p class="stat-n" id="statTotal"></p>
             <div id="statTop"></div>
           </div>
         </div>
@@ -769,41 +924,66 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
     <!-- ---------- Onglet 2 : gestion ---------- -->
     <section id="panel-gestion" role="tabpanel" aria-labelledby="tab-gestion" tabindex="-1" hidden>
-      <h1 class="page-title">Gestion des résultats</h1>
-      <p class="page-sub">Ajoutez vos résultats, regroupez-les par catégorie colorée, cochez ceux qui doivent apparaître sur la roue.</p>
+      <h1 class="page-title" data-i18n="manageTitle">Gestion des résultats</h1>
+      <p class="page-sub" data-i18n="manageSub">Ajoutez vos résultats, regroupez-les par catégorie colorée, cochez ceux qui doivent apparaître sur la roue.</p>
+
+      <div class="card opts">
+        <label class="opt">
+          <input type="checkbox" class="cb" id="optRemove">
+          <span><b data-i18n="optRemoveTitle">Retirer le résultat après tirage</b><span data-i18n="optRemoveHelp">Tirage sans remise : chaque résultat sorti est décoché automatiquement.</span></span>
+        </label>
+        <label class="opt">
+          <input type="checkbox" class="cb" id="optAvoid">
+          <span><b data-i18n="optAvoidTitle">Éviter le dernier résultat tiré</b><span data-i18n="optAvoidHelp">Empêche de tomber deux fois d'affilée sur la même part.</span></span>
+        </label>
+      </div>
 
       <form class="card" id="createForm" novalidate>
         <div class="form-grid">
           <label class="field">
-            <span>Nom du résultat *</span>
-            <input class="input" id="fName" maxlength="60" placeholder="Ex. Café" autocomplete="off" required>
+            <span data-i18n="fieldName">Nom du résultat *</span>
+            <input class="input" id="fName" maxlength="60" data-i18n-ph="phName" autocomplete="off" required>
           </label>
           <label class="field">
-            <span>Description / définition</span>
-            <input class="input" id="fDesc" maxlength="240" placeholder="Ex. Un espresso serré." autocomplete="off">
+            <span data-i18n="fieldDesc">Description / définition</span>
+            <input class="input" id="fDesc" maxlength="240" data-i18n-ph="phDesc" autocomplete="off">
           </label>
           <label class="field">
-            <span>Catégorie</span>
+            <span data-i18n="fieldCat">Catégorie</span>
             <select class="input" id="fCat"></select>
           </label>
           <label class="field" id="fNewWrap" hidden>
-            <span>Nom de la nouvelle catégorie *</span>
-            <input class="input" id="fNewCat" maxlength="40" placeholder="Ex. Boissons" autocomplete="off">
+            <span data-i18n="fieldNewCat">Nom de la nouvelle catégorie *</span>
+            <input class="input" id="fNewCat" maxlength="40" data-i18n-ph="phNewCat" autocomplete="off">
           </label>
-          <label class="field" style="max-width:130px">
-            <span>Couleur</span>
-            <input class="input" type="color" id="fColor" value="#d64545">
-          </label>
+          <div class="field-pair">
+            <label class="field">
+              <span data-i18n="fieldWeight">Poids</span>
+              <input class="input" type="number" id="fWeight" min="1" max="99" step="1" value="1">
+            </label>
+            <label class="field">
+              <span data-i18n="fieldColor">Couleur</span>
+              <input class="input" type="color" id="fColor" value="#d64545">
+            </label>
+          </div>
         </div>
-        <button class="btn primary" type="submit"><span aria-hidden="true">&#43;</span> Ajouter</button>
+        <button class="btn primary" type="submit"><span aria-hidden="true">&#43;</span> <span data-i18n="add">Ajouter</span></button>
       </form>
 
       <div class="toolbar">
-        <span class="count-pill"><b id="countActive">0</b> actif(s) sur <span id="countTotal">0</span></span>
+        <span class="search-wrap">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <input class="input" id="search" type="search" data-i18n-ph="phSearch" autocomplete="off">
+          <button class="icon-btn search-clear" id="searchClear" data-i18n-al="clearSearch" hidden>&#10005;</button>
+        </span>
+        <span class="count-pill"><b id="countActive">0</b> <span id="countLbl"></span></span>
         <span class="spacer"></span>
-        <button class="btn sm" id="btnExport"><span aria-hidden="true">&#8681;</span> Exporter</button>
-        <button class="btn sm" id="btnImport"><span aria-hidden="true">&#8679;</span> Importer</button>
-        <button class="btn sm danger" id="btnReset"><span aria-hidden="true">&#8635;</span> Réinitialiser</button>
+        <button class="btn sm" id="btnCheckAll" data-i18n="checkAll">Tout cocher</button>
+        <button class="btn sm" id="btnUncheckAll" data-i18n="uncheckAll">Tout décocher</button>
+        <button class="btn sm" id="btnShare"><span aria-hidden="true">&#128279;</span> <span data-i18n="share">Partager</span></button>
+        <button class="btn sm" id="btnExport"><span aria-hidden="true">&#8681;</span> <span data-i18n="export">Exporter</span></button>
+        <button class="btn sm" id="btnImport"><span aria-hidden="true">&#8679;</span> <span data-i18n="import">Importer</span></button>
+        <button class="btn sm danger" id="btnReset"><span aria-hidden="true">&#8635;</span> <span data-i18n="resetAll">Réinitialiser</span></button>
       </div>
 
       <div class="cat-list" id="catList"></div>
@@ -812,12 +992,12 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
   </main>
 </div>
 
-<!-- Modale générique (édition, confirmations, import/export) -->
+<!-- Modale générique (édition, confirmations, import/export/partage) -->
 <div class="modal-backdrop" id="modalBackdrop" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <header>
       <h2 id="modalTitle"></h2>
-      <button class="icon-btn" id="modalClose" aria-label="Fermer">&#10005;</button>
+      <button class="icon-btn" id="modalClose" data-i18n-al="close">&#10005;</button>
     </header>
     <div class="modal-body" id="modalBody"></div>
     <div class="modal-foot" id="modalFoot"></div>
@@ -830,12 +1010,13 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
 <script>
 /* ==========================================================================
-   ROUE DE FORTUNE - logique applicative (JavaScript vanilla, zéro dependance)
+   ROUE DE FORTUNE — logique applicative (JavaScript vanilla, zéro dépendance)
    Sommaire :
-     A. Utilitaires             E. Onglet Gestion
-     B. État & persistance      F. Modale, toast, import/export
-     C. Thèmes & navigation     G. Effets (son, confettis) & démarrage
-     D. Roue (rendu + tirage)
+     A. Utilitaires            F. Onglet Gestion
+     B. Traductions            G. Modale, toast, annulation
+     C. État & persistance     H. Import / export / partage
+     D. Thèmes, langue, nav    I. Effets (son, confettis)
+     E. Roue (rendu + tirage)  J. Démarrage
    ========================================================================== */
 (function () {
   'use strict';
@@ -851,6 +1032,9 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
+
+  /** Repli sans accent ni casse, pour une recherche tolérante. */
+  const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -873,9 +1057,9 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
   /** Mélange une couleur vers le blanc (p > 0) ou vers le noir (p < 0). */
   function shade(hex, p) {
     const { r, g, b } = hexToRgb(hex);
-    const t = p > 0 ? 255 : 0;
+    const target = p > 0 ? 255 : 0;
     const a = Math.abs(p);
-    return '#' + toHex(r + (t - r) * a) + toHex(g + (t - g) * a) + toHex(b + (t - b) * a);
+    return '#' + toHex(r + (target - r) * a) + toHex(g + (target - g) * a) + toHex(b + (target - b) * a);
   }
 
   /** Noir ou blanc selon la luminance relative (WCAG) du fond. */
@@ -886,49 +1070,281 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     return L > 0.42 ? '#101010' : '#ffffff';
   }
 
-  /* == B. État & persistance ============================================== */
+  /* --- Base64 « URL-safe » pour le partage par lien --- */
 
-  const STORAGE_KEY = 'roue-fortune-v1';
-  const MAX_HISTORY = 10;
+  function b64encode(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    bytes.forEach((b) => { bin += String.fromCharCode(b); });
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function b64decode(s) {
+    const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  /* == B. Traductions ===================================================== */
+
+  const I18N = {
+    fr: {
+      appName: 'Roue de Fortune', skip: 'Aller au contenu', openMenu: 'Ouvrir le menu',
+      mainNav: 'Navigation principale', navLabel: 'Navigation', tabWheel: 'Roue', tabManage: 'Gestion',
+      profileLabel: 'Roue active', manageProfiles: 'Gérer les roues',
+      styleLabel: 'Style', skinCasino: 'Casino', skinFeutre: 'Feutré', skinBlanc: 'Blanc', skinVelours: 'Velours',
+      prefsLabel: 'Préférences', darkMode: 'Mode nuit', sounds: 'Sons', langLabel: 'Langue',
+      resultsActive: 'résultat(s) actif(s)', catCount: '{0} catégorie(s)',
+      storageWarn: "Le stockage local est indisponible : vos modifications ne seront pas conservées après fermeture de l'onglet.",
+      dismiss: 'Masquer',
+      present: 'Présentation', exitPresent: 'Quitter', spinAria: 'Lancer la roue',
+      wheelAria: 'Roue des résultats actifs', spin: 'Lancer',
+      spinHintA: 'Astuce : la touche', enterKey: 'Entrée', spinHintB: 'lance aussi la roue.',
+      resultKicker: 'Résultat', resultEmpty: 'Lancez la roue pour découvrir votre résultat.',
+      noDesc: 'Aucune description pour ce résultat.',
+      wheelEmpty1: 'Aucun résultat', wheelEmpty2: 'Onglet Gestion',
+      legendTitle: 'Légende', historyTitle: 'Historique', statsTitle: 'Statistiques',
+      clear: 'Vider', export: 'Exporter', import: 'Importer', share: 'Partager',
+      resetZero: 'Remettre à zéro', resetAll: 'Réinitialiser', add: 'Ajouter',
+      noDraw: 'Aucun tirage pour le moment.', drawCount: '{0} tirage(s) enregistré(s).',
+      manageTitle: 'Gestion des résultats',
+      manageSub: 'Ajoutez vos résultats, regroupez-les par catégorie colorée, cochez ceux qui doivent apparaître sur la roue.',
+      optRemoveTitle: 'Retirer le résultat après tirage',
+      optRemoveHelp: 'Tirage sans remise : chaque résultat sorti est décoché automatiquement.',
+      optAvoidTitle: 'Éviter le dernier résultat tiré',
+      optAvoidHelp: "Empêche de tomber deux fois d'affilée sur la même part.",
+      fieldName: 'Nom du résultat *', fieldDesc: 'Description / définition', fieldCat: 'Catégorie',
+      fieldNewCat: 'Nom de la nouvelle catégorie *', fieldWeight: 'Poids', fieldColor: 'Couleur',
+      phName: 'Ex. Café', phDesc: 'Ex. Un espresso serré.', phNewCat: 'Ex. Boissons',
+      phSearch: 'Rechercher un résultat…', clearSearch: 'Effacer la recherche',
+      newCatOption: '+ Nouvelle catégorie…',
+      checkAll: 'Tout cocher', uncheckAll: 'Tout décocher',
+      countOf: 'actif(s) sur {0}', catEmpty: 'Catégorie vide.',
+      noCategory: 'Aucune catégorie. Créez-en une avec le formulaire ci-dessus.',
+      noMatch: 'Aucun résultat ne correspond à « {0} ».',
+      edit: 'Modifier {0}', del: 'Supprimer {0}', moveUp: 'Monter {0}', moveDown: 'Descendre {0}',
+      fold: 'Plier ou déplier {0}', catName: 'Nom de la catégorie', catColor: 'Couleur de {0}',
+      includeIn: 'Inclure {0} dans la roue', showAllOf: 'Afficher tous les résultats de {0}',
+      weightOf: 'Poids de {0}', delCat: 'Supprimer la catégorie {0}',
+      cancel: 'Annuler', confirm: 'Confirmer', save: 'Enregistrer', close: 'Fermer',
+      copy: 'Copier', download: 'Télécharger', replace: 'Remplacer', merge: 'Fusionner',
+      open: 'Ouvrir', ignore: 'Ignorer', create: 'Créer', rename: 'Renommer', duplicate: 'Dupliquer',
+      deleteBtn: 'Supprimer',
+      undo: 'Annuler',
+      editResult: 'Modifier le résultat',
+      delResultTitle: 'Supprimer « {0} » ?', delResultBody: 'Ce résultat sera retiré de la liste. Vous pourrez annuler juste après.',
+      delCatTitle: 'Supprimer la catégorie « {0} » ?',
+      delCatBody: 'La catégorie et ses {0} résultat(s) seront supprimés. Vous pourrez annuler juste après.',
+      delCatBodyEmpty: 'Cette catégorie est vide.',
+      resetTitle: 'Tout réinitialiser ?',
+      resetBody: 'Catégories, résultats, historique et statistiques de cette roue reviendront aux valeurs par défaut. Le style choisi est conservé, et vous pourrez annuler juste après.',
+      exportTitle: 'Exporter la configuration',
+      exportBody: 'Copiez ce JSON ou téléchargez-le pour le recharger plus tard, ou sur un autre appareil.',
+      importTitle: 'Importer une configuration',
+      importBody: 'Choisissez un fichier JSON exporté depuis cette application, ou collez son contenu ci-dessous.',
+      pickFile: 'Choisir un fichier…',
+      shareTitle: 'Partager cette roue',
+      shareBody: 'Ce lien contient toute la roue. Envoyez-le : la personne qui l’ouvre retrouvera vos résultats, sans compte ni serveur.',
+      shareLong: 'Attention : ce lien est très long ({0} caractères) et certaines messageries le tronquent. Préférez l’export JSON pour une roue de cette taille.',
+      sharedTitle: 'Une roue partagée a été reçue',
+      sharedBody: '« {0} » contient {1} résultat(s) dans {2} catégorie(s). Que faire ?',
+      openShared: 'Ouvrir comme nouvelle roue', mergeShared: 'Fusionner dans la roue actuelle',
+      histTitle: 'Exporter l’historique', histBody: 'Historique au format CSV, séparateur point-virgule.',
+      profilesTitle: 'Gérer les roues', profileNew: 'Nouvelle roue', profileName: 'Nom de la roue',
+      profileDelTitle: 'Supprimer la roue « {0} » ?',
+      profileDelBody: 'Ses catégories, résultats, historique et statistiques seront supprimés. Vous pourrez annuler juste après.',
+      profileLast: 'Impossible de supprimer la dernière roue.',
+      copySuffix: '(copie)',
+      tAdded: '« {0} » ajouté.', tUpdated: 'Résultat mis à jour.', tDelResult: 'Résultat supprimé.',
+      tDelCat: 'Catégorie supprimée.', tRestored: 'Rétabli.', tCopied: 'Copié dans le presse-papiers.',
+      tCopyFail: 'Copie impossible : sélectionnez le texte.',
+      tDownloadFail: 'Téléchargement indisponible ici : utilisez « Copier ».',
+      tImported: 'Configuration remplacée.', tMerged: 'Configuration fusionnée.',
+      tReset: 'Roue réinitialisée.', tHistCleared: 'Historique vidé.', tStatsCleared: 'Statistiques remises à zéro.',
+      tNameRequired: 'Le nom du résultat est obligatoire.', tCatRequired: 'Donnez un nom à la nouvelle catégorie.',
+      tNoActive: "Cochez au moins un résultat dans l'onglet Gestion.",
+      tInvalidJson: 'JSON invalide.', tNoCats: 'Aucune catégorie exploitable dans ce fichier.',
+      tFileLoaded: 'Fichier chargé : choisissez Fusionner ou Remplacer.', tFileError: 'Lecture du fichier impossible.',
+      tExhausted: 'Tous les résultats sont sortis.', tRecheck: 'Tout recocher',
+      tProfileCreated: 'Roue « {0} » créée.', tProfileDeleted: 'Roue supprimée.', tProfileRenamed: 'Roue renommée.',
+      tSharedLoaded: 'Roue partagée ouverte.',
+      csvDate: 'Date', csvResult: 'Résultat'
+    },
+    en: {
+      appName: 'Wheel of Fortune', skip: 'Skip to content', openMenu: 'Open menu',
+      mainNav: 'Main navigation', navLabel: 'Navigation', tabWheel: 'Wheel', tabManage: 'Manage',
+      profileLabel: 'Active wheel', manageProfiles: 'Manage wheels',
+      styleLabel: 'Style', skinCasino: 'Casino', skinFeutre: 'Felt', skinBlanc: 'White', skinVelours: 'Velvet',
+      prefsLabel: 'Preferences', darkMode: 'Night mode', sounds: 'Sounds', langLabel: 'Language',
+      resultsActive: 'active outcome(s)', catCount: '{0} category/ies',
+      storageWarn: 'Local storage is unavailable: your changes will not be kept once this tab is closed.',
+      dismiss: 'Dismiss',
+      present: 'Presentation', exitPresent: 'Exit', spinAria: 'Spin the wheel',
+      wheelAria: 'Wheel of active outcomes', spin: 'Spin',
+      spinHintA: 'Tip: the', enterKey: 'Enter', spinHintB: 'key also spins the wheel.',
+      resultKicker: 'Outcome', resultEmpty: 'Spin the wheel to reveal your outcome.',
+      noDesc: 'No description for this outcome.',
+      wheelEmpty1: 'No outcome', wheelEmpty2: 'Manage tab',
+      legendTitle: 'Legend', historyTitle: 'History', statsTitle: 'Statistics',
+      clear: 'Clear', export: 'Export', import: 'Import', share: 'Share',
+      resetZero: 'Reset to zero', resetAll: 'Reset', add: 'Add',
+      noDraw: 'No spin yet.', drawCount: '{0} spin(s) recorded.',
+      manageTitle: 'Manage outcomes',
+      manageSub: 'Add your outcomes, group them into colored categories, tick the ones that belong on the wheel.',
+      optRemoveTitle: 'Remove outcome after each spin',
+      optRemoveHelp: 'Draw without replacement: every outcome drawn is unticked automatically.',
+      optAvoidTitle: 'Avoid the last outcome drawn',
+      optAvoidHelp: 'Prevents landing on the same slice twice in a row.',
+      fieldName: 'Outcome name *', fieldDesc: 'Description / definition', fieldCat: 'Category',
+      fieldNewCat: 'New category name *', fieldWeight: 'Weight', fieldColor: 'Color',
+      phName: 'e.g. Coffee', phDesc: 'e.g. A short, strong espresso.', phNewCat: 'e.g. Drinks',
+      phSearch: 'Search an outcome…', clearSearch: 'Clear search',
+      newCatOption: '+ New category…',
+      checkAll: 'Tick all', uncheckAll: 'Untick all',
+      countOf: 'active of {0}', catEmpty: 'Empty category.',
+      noCategory: 'No category yet. Create one with the form above.',
+      noMatch: 'No outcome matches "{0}".',
+      edit: 'Edit {0}', del: 'Delete {0}', moveUp: 'Move {0} up', moveDown: 'Move {0} down',
+      fold: 'Collapse or expand {0}', catName: 'Category name', catColor: 'Color of {0}',
+      includeIn: 'Include {0} on the wheel', showAllOf: 'Show every outcome of {0}',
+      weightOf: 'Weight of {0}', delCat: 'Delete category {0}',
+      cancel: 'Cancel', confirm: 'Confirm', save: 'Save', close: 'Close',
+      copy: 'Copy', download: 'Download', replace: 'Replace', merge: 'Merge',
+      open: 'Open', ignore: 'Ignore', create: 'Create', rename: 'Rename', duplicate: 'Duplicate',
+      deleteBtn: 'Delete',
+      undo: 'Undo',
+      editResult: 'Edit outcome',
+      delResultTitle: 'Delete "{0}"?', delResultBody: 'This outcome will be removed from the list. You can undo right after.',
+      delCatTitle: 'Delete category "{0}"?',
+      delCatBody: 'The category and its {0} outcome(s) will be deleted. You can undo right after.',
+      delCatBodyEmpty: 'This category is empty.',
+      resetTitle: 'Reset everything?',
+      resetBody: 'Categories, outcomes, history and statistics of this wheel will return to their defaults. Your style is kept, and you can undo right after.',
+      exportTitle: 'Export configuration',
+      exportBody: 'Copy this JSON or download it to reload later, or on another device.',
+      importTitle: 'Import a configuration',
+      importBody: 'Choose a JSON file exported from this app, or paste its content below.',
+      pickFile: 'Choose a file…',
+      shareTitle: 'Share this wheel',
+      shareBody: 'This link carries the whole wheel. Send it: whoever opens it gets your outcomes, with no account and no server.',
+      shareLong: 'Careful: this link is very long ({0} characters) and some messaging apps truncate it. Prefer the JSON export for a wheel this size.',
+      sharedTitle: 'A shared wheel was received',
+      sharedBody: '"{0}" holds {1} outcome(s) across {2} category/ies. What now?',
+      openShared: 'Open as a new wheel', mergeShared: 'Merge into the current wheel',
+      histTitle: 'Export history', histBody: 'History as CSV, semicolon separated.',
+      profilesTitle: 'Manage wheels', profileNew: 'New wheel', profileName: 'Wheel name',
+      profileDelTitle: 'Delete wheel "{0}"?',
+      profileDelBody: 'Its categories, outcomes, history and statistics will be deleted. You can undo right after.',
+      profileLast: 'The last wheel cannot be deleted.',
+      copySuffix: '(copy)',
+      tAdded: '"{0}" added.', tUpdated: 'Outcome updated.', tDelResult: 'Outcome deleted.',
+      tDelCat: 'Category deleted.', tRestored: 'Restored.', tCopied: 'Copied to clipboard.',
+      tCopyFail: 'Copy failed: select the text instead.',
+      tDownloadFail: 'Download is unavailable here: use "Copy".',
+      tImported: 'Configuration replaced.', tMerged: 'Configuration merged.',
+      tReset: 'Wheel reset.', tHistCleared: 'History cleared.', tStatsCleared: 'Statistics reset.',
+      tNameRequired: 'The outcome name is required.', tCatRequired: 'Give the new category a name.',
+      tNoActive: 'Tick at least one outcome in the Manage tab.',
+      tInvalidJson: 'Invalid JSON.', tNoCats: 'No usable category in this file.',
+      tFileLoaded: 'File loaded: choose Merge or Replace.', tFileError: 'Could not read the file.',
+      tExhausted: 'Every outcome has been drawn.', tRecheck: 'Tick all again',
+      tProfileCreated: 'Wheel "{0}" created.', tProfileDeleted: 'Wheel deleted.', tProfileRenamed: 'Wheel renamed.',
+      tSharedLoaded: 'Shared wheel opened.',
+      csvDate: 'Date', csvResult: 'Outcome'
+    }
+  };
+
+  let lang = 'fr';
+
+  /** Traduit une clé, en remplaçant {0}, {1}… par les arguments fournis. */
+  function t(key) {
+    let s = (I18N[lang] && I18N[lang][key]) || I18N.fr[key] || key;
+    for (let i = 1; i < arguments.length; i++) s = s.split('{' + (i - 1) + '}').join(arguments[i]);
+    return s;
+  }
+
+  /** Applique la langue à tout le balisage statique. */
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.title = t('appName');
+    $$('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+    $$('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+    $$('[data-i18n-al]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.i18nAl)); });
+    $$('.lang').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === lang)));
+  }
+
+  /* == C. État & persistance ============================================== */
+
+  const KEY = 'roue-fortune-v2';
+  const KEY_V1 = 'roue-fortune-v1';
   const SKINS = ['casino', 'feutre', 'blanc', 'velours'];
+  const MAX_HISTORY = 50;
+  const MAX_WEIGHT = 99;
+  const NUMBERED_ABOVE = 40;   // au-delà, les parts portent un numéro et une légende s'affiche
+  const PALETTE = ['#d64545', '#e08a1e', '#c9a227', '#2f8f6f', '#2b7bb9', '#6a4fb6', '#c2559b', '#5a6b7d'];
 
-  /** Jeu de données proposé à la première visite. */
-  function defaultState() {
+  /** Le stockage est-il réellement utilisable (navigation privée, quota…) ? */
+  const storageOK = (function () {
+    try {
+      localStorage.setItem('__roue_test__', '1');
+      localStorage.removeItem('__roue_test__');
+      return true;
+    } catch (e) { return false; }
+  })();
+
+  const detectLang = () => (String(navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en');
+
+  /** Jeu de données proposé à la première visite, dans la langue détectée. */
+  function seedProfile(l) {
     const c1 = uid(), c2 = uid();
+    const fr = l === 'fr';
     return {
-      version: 1,
-      skin: 'blanc',
-      dark: window.matchMedia('(prefers-color-scheme: dark)').matches,
-      sound: true,
+      id: uid(),
+      name: fr ? 'Ma roue' : 'My wheel',
       categories: [
-        { id: c1, name: 'Boissons', color: '#d64545', collapsed: false },
-        { id: c2, name: 'Pauses',   color: '#2f8f6f', collapsed: false }
+        { id: c1, name: fr ? 'Boissons' : 'Drinks', color: '#d64545', collapsed: false },
+        { id: c2, name: fr ? 'Pauses' : 'Breaks', color: '#2f8f6f', collapsed: false }
       ],
-      results: [
-        { id: uid(), name: 'Café',        desc: 'Un espresso serré pour attaquer la journée.',    cat: c1, active: true },
-        { id: uid(), name: 'Thé vert',    desc: 'Une pause douce, sans excès de caféine.',        cat: c1, active: true },
-        { id: uid(), name: "Jus d'orange", desc: 'Vitamine C et fraîcheur immédiate.',            cat: c1, active: true },
-        { id: uid(), name: 'Marche',      desc: "Dix minutes dehors pour s'aérer la tête.",       cat: c2, active: true },
-        { id: uid(), name: 'Lecture',     desc: "Un quart d'heure avec le livre en cours.",       cat: c2, active: true }
+      results: fr ? [
+        { id: uid(), name: 'Café', desc: 'Un espresso serré pour attaquer la journée.', cat: c1, active: true, weight: 1 },
+        { id: uid(), name: 'Thé vert', desc: 'Une pause douce, sans excès de caféine.', cat: c1, active: true, weight: 1 },
+        { id: uid(), name: "Jus d'orange", desc: 'Vitamine C et fraîcheur immédiate.', cat: c1, active: true, weight: 1 },
+        { id: uid(), name: 'Marche', desc: "Dix minutes dehors pour s'aérer la tête.", cat: c2, active: true, weight: 1 },
+        { id: uid(), name: 'Lecture', desc: "Un quart d'heure avec le livre en cours.", cat: c2, active: true, weight: 1 }
+      ] : [
+        { id: uid(), name: 'Coffee', desc: 'A short, strong espresso to start the day.', cat: c1, active: true, weight: 1 },
+        { id: uid(), name: 'Green tea', desc: 'A gentle break, easy on the caffeine.', cat: c1, active: true, weight: 1 },
+        { id: uid(), name: 'Orange juice', desc: 'Vitamin C and instant freshness.', cat: c1, active: true, weight: 1 },
+        { id: uid(), name: 'Short walk', desc: 'Ten minutes outside to clear your head.', cat: c2, active: true, weight: 1 },
+        { id: uid(), name: 'Reading', desc: 'A quarter of an hour with the current book.', cat: c2, active: true, weight: 1 }
       ],
-      last: null,                 // dernier résultat obtenu {name, desc, color, catName}
-      history: [],                // 10 derniers tirages
+      options: { removeOnDraw: false, avoidRepeat: false },
+      last: null,
+      history: [],
       stats: { total: 0, counts: {} }
     };
   }
 
-  /**
-   * Valide et complète une structure venant du stockage ou d'un import.
-   * Renvoie null uniquement si la structure est inexploitable ; une liste
-   * vide reste un état légitime (l'utilisateur a pu tout supprimer).
-   */
-  function sanitize(raw) {
+  function defaultState() {
+    const l = detectLang();
+    const p = seedProfile(l);
+    return {
+      version: 2, skin: 'blanc', lang: l, sound: true,
+      dark: window.matchMedia('(prefers-color-scheme: dark)').matches,
+      activeId: p.id, profiles: [p]
+    };
+  }
+
+  /** Valide une roue (catégories, résultats, options, historique, statistiques). */
+  function sanitizeProfile(raw, fallbackName) {
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.categories)) return null;
+
     const categories = raw.categories
       .filter((c) => c && typeof c.name === 'string')
       .map((c) => ({
         id: String(c.id || uid()),
-        name: c.name.slice(0, 40) || 'Sans nom',
+        name: c.name.slice(0, 40) || '—',
         color: normalizeHex(c.color, '#888888'),
         collapsed: !!c.collapsed
       }));
@@ -938,48 +1354,105 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
       .filter((r) => r && typeof r.name === 'string' && known.has(String(r.cat)))
       .map((r) => ({
         id: String(r.id || uid()),
-        name: r.name.slice(0, 60) || 'Sans nom',
+        name: r.name.slice(0, 60) || '—',
         desc: typeof r.desc === 'string' ? r.desc.slice(0, 240) : '',
         cat: String(r.cat),
-        active: r.active !== false
+        active: r.active !== false,
+        weight: clamp(Math.round(Number(r.weight) || 1), 1, MAX_WEIGHT)
       }));
 
+    const o = raw.options && typeof raw.options === 'object' ? raw.options : {};
     return {
-      version: 1,
-      skin: SKINS.indexOf(raw.skin) >= 0 ? raw.skin : 'blanc',
-      dark: typeof raw.dark === 'boolean' ? raw.dark : window.matchMedia('(prefers-color-scheme: dark)').matches,
-      sound: raw.sound !== false,
+      id: String(raw.id || uid()),
+      name: (typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : fallbackName || 'Roue').slice(0, 40),
       categories: categories,
       results: results,
+      options: { removeOnDraw: !!o.removeOnDraw, avoidRepeat: !!o.avoidRepeat },
       last: raw.last && typeof raw.last === 'object' ? raw.last : null,
-      history: Array.isArray(raw.history) ? raw.history.slice(0, MAX_HISTORY) : [],
-      stats: (raw.stats && typeof raw.stats === 'object' && raw.stats.counts)
+      history: (Array.isArray(raw.history) ? raw.history : []).slice(0, MAX_HISTORY),
+      stats: (raw.stats && raw.stats.counts && typeof raw.stats.counts === 'object')
         ? { total: Number(raw.stats.total) || 0, counts: raw.stats.counts }
         : { total: 0, counts: {} }
     };
   }
 
+  function sanitizeState(raw) {
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.profiles)) return null;
+    const profiles = raw.profiles.map((p, i) => sanitizeProfile(p, 'Roue ' + (i + 1))).filter(Boolean);
+    if (!profiles.length) return null;
+    const activeId = profiles.some((p) => p.id === raw.activeId) ? raw.activeId : profiles[0].id;
+    return {
+      version: 2,
+      skin: SKINS.indexOf(raw.skin) >= 0 ? raw.skin : 'blanc',
+      lang: raw.lang === 'en' || raw.lang === 'fr' ? raw.lang : detectLang(),
+      sound: raw.sound !== false,
+      dark: typeof raw.dark === 'boolean' ? raw.dark : window.matchMedia('(prefers-color-scheme: dark)').matches,
+      activeId: activeId,
+      profiles: profiles
+    };
+  }
+
+  /** Reprend une sauvegarde de la version 1 (roue unique) sous forme de roue nommée. */
+  function migrateV1(raw) {
+    const prof = sanitizeProfile({
+      id: uid(), name: 'Ma roue',
+      categories: raw.categories, results: raw.results,
+      last: raw.last, history: raw.history, stats: raw.stats
+    }, 'Ma roue');
+    if (!prof) return null;
+    return {
+      version: 2,
+      skin: SKINS.indexOf(raw.skin) >= 0 ? raw.skin : 'blanc',
+      lang: detectLang(),
+      sound: raw.sound !== false,
+      dark: typeof raw.dark === 'boolean' ? raw.dark : window.matchMedia('(prefers-color-scheme: dark)').matches,
+      activeId: prof.id, profiles: [prof]
+    };
+  }
+
   function load() {
-    try { return sanitize(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
-    catch (e) { return null; }
+    if (!storageOK) return null;
+    try {
+      const v2 = sanitizeState(JSON.parse(localStorage.getItem(KEY)));
+      if (v2) return v2;
+      const old = JSON.parse(localStorage.getItem(KEY_V1));
+      return old ? migrateV1(old) : null;
+    } catch (e) { return null; }
   }
 
   let saveTimer = null;
   function save() {                                  // écriture regroupée (anti-rebond)
+    if (!storageOK) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-      catch (e) { /* quota dépassé ou navigation privée : l'app reste utilisable */ }
+      try { localStorage.setItem(KEY, JSON.stringify(state)); }
+      catch (e) { /* quota dépassé : l'application reste utilisable */ }
     }, 150);
   }
 
   let state = load() || defaultState();
+  lang = state.lang;
 
-  const catById = (id) => state.categories.find((c) => c.id === id) || null;
-  const resById = (id) => state.results.find((r) => r.id === id) || null;
-  const activeResults = () => state.results.filter((r) => r.active && catById(r.cat));
+  /* --- Accès à la roue active --- */
+  const P = () => state.profiles.find((p) => p.id === state.activeId) || state.profiles[0];
+  const catById = (id) => P().categories.find((c) => c.id === id) || null;
+  const resById = (id) => P().results.find((r) => r.id === id) || null;
 
-  /* == C. Thèmes & navigation ============================================= */
+  /**
+   * Résultats actifs, dans l'ordre d'affichage : catégorie par catégorie.
+   * C'est aussi l'ordre des parts sur la roue, pour que les deux se répondent.
+   */
+  function orderedActive() {
+    const out = [];
+    P().categories.forEach((c) => {
+      P().results.forEach((r) => { if (r.cat === c.id && r.active) out.push(r); });
+    });
+    return out;
+  }
+
+  const totalResults = () => P().results.length;
+
+  /* == D. Thèmes, langue, navigation, roues ============================== */
 
   const root = document.documentElement;
 
@@ -1005,12 +1478,17 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     if (state.sound) playTick(1);
   });
 
+  $$('.lang').forEach((btn) => btn.addEventListener('click', () => {
+    lang = state.lang = btn.dataset.l;
+    applyLang(); save(); renderAll();
+  }));
+
   /* --- Onglets (ARIA + navigation clavier) --- */
   function selectTab(name) {
-    $$('.tab').forEach((t) => {
-      const on = t.dataset.tab === name;
-      t.setAttribute('aria-selected', String(on));
-      t.tabIndex = on ? 0 : -1;
+    $$('.tab').forEach((tb) => {
+      const on = tb.dataset.tab === name;
+      tb.setAttribute('aria-selected', String(on));
+      tb.tabIndex = on ? 0 : -1;
     });
     $('#panel-roue').hidden = name !== 'roue';
     $('#panel-gestion').hidden = name !== 'gestion';
@@ -1018,13 +1496,13 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     closeDrawer();
   }
 
-  $$('.tab').forEach((t) => {
-    t.addEventListener('click', () => selectTab(t.dataset.tab));
-    t.addEventListener('keydown', (e) => {
-      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  $$('.tab').forEach((tb) => {
+    tb.addEventListener('click', () => selectTab(tb.dataset.tab));
+    tb.addEventListener('keydown', (e) => {
+      if (['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].indexOf(e.key) < 0) return;
       e.preventDefault();
       const tabs = $$('.tab');
-      const i = tabs.indexOf(t);
+      const i = tabs.indexOf(tb);
       const next = tabs[(i + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
       next.focus(); selectTab(next.dataset.tab);
     });
@@ -1032,16 +1510,124 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
   /* --- Tiroir mobile --- */
   const sidebar = $('#sidebar'), scrim = $('#scrim'), burger = $('#burger');
-  function openDrawer() { sidebar.classList.add('open'); scrim.hidden = false; requestAnimationFrame(() => scrim.classList.add('on')); burger.setAttribute('aria-expanded', 'true'); }
+  function openDrawer() {
+    sidebar.classList.add('open'); scrim.hidden = false;
+    requestAnimationFrame(() => scrim.classList.add('on'));
+    burger.setAttribute('aria-expanded', 'true');
+  }
   function closeDrawer() {
     if (!sidebar.classList.contains('open')) return;
-    sidebar.classList.remove('open'); scrim.classList.remove('on'); burger.setAttribute('aria-expanded', 'false');
+    sidebar.classList.remove('open'); scrim.classList.remove('on');
+    burger.setAttribute('aria-expanded', 'false');
     setTimeout(() => { scrim.hidden = true; }, 220);
   }
   burger.addEventListener('click', () => (sidebar.classList.contains('open') ? closeDrawer() : openDrawer()));
   scrim.addEventListener('click', closeDrawer);
 
-  /* == D. La roue ========================================================= */
+  /* --- Roues multiples --- */
+  const profileSel = $('#profileSel');
+
+  function renderProfiles() {
+    profileSel.innerHTML = state.profiles
+      .map((p) => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join('');
+    profileSel.value = state.activeId;
+  }
+
+  function switchProfile(id) {
+    if (!state.profiles.some((p) => p.id === id)) return;
+    state.activeId = id;
+    search = '';
+    $('#search').value = '';
+    save(); renderAll();
+  }
+
+  profileSel.addEventListener('change', () => switchProfile(profileSel.value));
+
+  /** Demande un nom, puis exécute l'action (création, renommage, duplication). */
+  function askName(title, initial, okLabel, done) {
+    openModal({
+      title: title,
+      body: '<label class="field"><span>' + esc(t('profileName')) + '</span>'
+          + '<input class="input" id="pfName" maxlength="40" value="' + esc(initial) + '"></label>',
+      buttons: [
+        { label: t('cancel'), cls: 'ghost', onClick: closeModal },
+        { label: okLabel, cls: 'primary', onClick: () => {
+            const v = $('#pfName').value.trim();
+            if (!v) { $('#pfName').focus(); return; }
+            closeModal(); done(v.slice(0, 40));
+          } }
+      ],
+      onOpen: () => { const i = $('#pfName'); i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $$('#modalFoot .btn').pop().click(); } }); }
+    });
+  }
+
+  $('#profileMenu').addEventListener('click', () => {
+    const p = P();
+    openModal({
+      title: t('profilesTitle'),
+      body: '<p><b>' + esc(p.name) + '</b> — ' + orderedActive().length + ' ' + esc(t('countOf', totalResults())) + '</p>',
+      buttons: [
+        { label: t('close'), cls: 'ghost', onClick: closeModal },
+        { label: t('duplicate'), onClick: () => {
+            closeModal();
+            const copy = JSON.parse(JSON.stringify(p));
+            copy.id = uid();
+            copy.name = (p.name + ' ' + t('copySuffix')).slice(0, 40);
+            copy.categories.forEach((c) => { const old = c.id; c.id = uid(); copy.results.forEach((r) => { if (r.cat === old) r.cat = c.id; }); });
+            copy.results.forEach((r) => { r.id = uid(); });
+            copy.history = []; copy.stats = { total: 0, counts: {} }; copy.last = null;
+            state.profiles.push(copy); state.activeId = copy.id;
+            save(); renderAll(); toast(t('tProfileCreated', copy.name));
+          } },
+        { label: t('rename'), onClick: () => {
+            closeModal();
+            askName(t('rename'), p.name, t('save'), (v) => { p.name = v; save(); renderProfiles(); toast(t('tProfileRenamed')); });
+          } },
+        { label: t('profileNew'), cls: 'primary', onClick: () => {
+            closeModal();
+            askName(t('profileNew'), '', t('create'), (v) => {
+              const np = seedProfile(lang);
+              np.name = v; np.categories = []; np.results = [];
+              state.profiles.push(np); state.activeId = np.id;
+              save(); renderAll(); selectTab('gestion'); toast(t('tProfileCreated', v));
+            });
+          } },
+        { label: t('deleteBtn'), cls: 'danger', onClick: async () => {
+            closeModal();
+            if (state.profiles.length < 2) { toast(t('profileLast')); return; }
+            if (!(await confirmDialog(t('profileDelTitle', p.name), t('profileDelBody')))) return;
+            const idx = state.profiles.indexOf(p);
+            const removed = state.profiles.splice(idx, 1)[0];
+            state.activeId = state.profiles[Math.min(idx, state.profiles.length - 1)].id;
+            save(); renderAll();
+            toastUndo(t('tProfileDeleted'), () => {
+              state.profiles.splice(idx, 0, removed);
+              state.activeId = removed.id;
+              save(); renderAll();
+            });
+          } }
+      ]
+    });
+  });
+
+  /* --- Mode présentation --- */
+  function setPresenting(on) {
+    document.body.classList.toggle('presenting', on);
+    $('#presentLbl').textContent = t(on ? 'exitPresent' : 'present');
+    if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else if (!on && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+    renderWheel();
+  }
+
+  $('#presentBtn').addEventListener('click', () => setPresenting(!document.body.classList.contains('presenting')));
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && document.body.classList.contains('presenting')) setPresenting(false);
+  });
+
+  /* == E. La roue ========================================================= */
 
   const rotor = $('#rotor');
   const gSlices = $('#slices');
@@ -1049,10 +1635,11 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
   const spinBtn = $('#spinBtn');
   const hubBtn = $('#hubBtn');
 
-  const CX = 50, CY = 50, R = 45;      // repère du viewBox 0 0 100 100
-  let rotation = 0;                     // angle courant de la roue, en degrés
+  const CX = 50, CY = 50, R = 45, RT = 29, LEN = 27;
+  let rotation = 0;          // angle courant de la roue, en degrés
   let spinning = false;
-  let wheelDirty = false;               // demande de rendu différée pendant une rotation
+  let wheelDirty = false;    // rendu différé demandé pendant une rotation
+  let segments = [];         // parts courantes : { res, color, start, end }
 
   /** Point du cercle à l'angle donné, mesuré dans le sens horaire depuis le haut. */
   function polar(r, deg) {
@@ -1060,78 +1647,111 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
   }
 
-  /** Indice du secteur situé sous l'aiguille pour une rotation donnee. */
-  function indexAtPointer(rot, n) {
-    const a = ((360 - (rot % 360)) % 360 + 360) % 360;
-    return Math.floor(a / (360 / n)) % n;
+  /**
+   * Découpe la roue : chaque part occupe un angle proportionnel à son poids.
+   * À poids égaux on retrouve des parts identiques.
+   */
+  function buildSegments() {
+    const list = orderedActive();
+    const total = list.reduce((s, r) => s + (r.weight || 1), 0);
+    let a = 0;
+    return list.map((r, i) => {
+      const span = total > 0 ? 360 * (r.weight || 1) / total : 0;
+      const cat = catById(r.cat);
+      const base = normalizeHex(cat ? cat.color : '#888888');
+      const seg = {
+        res: r,
+        // Alternance clair/foncé pour distinguer deux parts voisines de même couleur.
+        color: list.length > 1 ? shade(base, i % 2 ? 0.14 : -0.07) : base,
+        start: a,
+        end: a + span
+      };
+      a += span;
+      return seg;
+    });
   }
 
-  /** (Re)dessiné les secteurs et les étiquettes à partir des résultats actifs. */
+  /** Indice de la part située sous l'aiguille pour une rotation donnée. */
+  function indexAtPointer(rot) {
+    if (!segments.length) return -1;
+    const a = ((360 - (rot % 360)) % 360 + 360) % 360;
+    for (let i = 0; i < segments.length; i++) {
+      if (a >= segments[i].start && a < segments[i].end) return i;
+    }
+    return segments.length - 1;
+  }
+
+  /** (Re)dessine les parts, les étiquettes et, si besoin, la légende. */
   function renderWheel() {
     if (spinning) { wheelDirty = true; return; }
 
-    const list = activeResults();
-    const n = list.length;
+    segments = buildSegments();
+    const n = segments.length;
     gSlices.innerHTML = '';
     gLabels.innerHTML = '';
 
-    if (n === 0) {                                   // aucun résultat coché
+    if (n === 0) {
       gSlices.innerHTML = '<circle class="wheel-empty" cx="50" cy="50" r="45"></circle>';
-      gLabels.innerHTML = '<text x="50" y="46" text-anchor="middle" font-size="5" fill="currentColor" opacity=".65">Aucun résultat</text>'
-                        + '<text x="50" y="54" text-anchor="middle" font-size="4" fill="currentColor" opacity=".5">Onglet Gestion</text>';
+      gLabels.innerHTML = '<text x="50" y="46" text-anchor="middle" font-size="5" fill="currentColor" opacity=".65">' + esc(t('wheelEmpty1')) + '</text>'
+                        + '<text x="50" y="54" text-anchor="middle" font-size="4" fill="currentColor" opacity=".5">' + esc(t('wheelEmpty2')) + '</text>';
       setSpinEnabled(false);
+      renderLegend(false);
       return;
     }
     setSpinEnabled(true);
 
-    const seg = 360 / n;
-    // Etiquettes radiales : le texte court le long du rayon, entre le moyeu et la
-    // jante. RT = rayon du milieu du texte, LEN = longueur radiale disponible.
-    const RT = 29, LEN = 27;
-    // Epaisseur tangentielle offerte par un secteur a ce rayon : plafonne le corps.
-    const fsMax = clamp((2 * Math.PI * RT / n) * 0.62, 1.9, 5.4);
-    const showLabels = n <= 40;
-
+    // Au-delà d'un certain nombre de parts, un nom ne tient plus : on numérote.
+    const numbered = n > NUMBERED_ABOVE;
     let slices = '', labels = '';
 
-    for (let i = 0; i < n; i++) {
-      const r = list[i];
-      const cat = catById(r.cat);
-      const base = normalizeHex(cat ? cat.color : '#888888');
-      // Légère alternance clair/foncé pour distinguer deux secteurs voisins de même catégorie.
-      const fill = n > 1 ? shade(base, i % 2 ? 0.14 : -0.07) : base;
-      const a0 = i * seg, a1 = (i + 1) * seg;
+    segments.forEach((seg, i) => {
+      const span = seg.end - seg.start;
 
       if (n === 1) {
-        slices += '<circle cx="50" cy="50" r="' + R + '" fill="' + fill + '"></circle>';
+        slices += '<circle cx="50" cy="50" r="' + R + '" fill="' + seg.color + '"></circle>';
       } else {
-        const p0 = polar(R, a0), p1 = polar(R, a1);
-        const large = seg > 180 ? 1 : 0;
+        const p0 = polar(R, seg.start), p1 = polar(R, seg.end);
+        const large = span > 180 ? 1 : 0;
         slices += '<path d="M' + CX + ' ' + CY + ' L' + p0[0].toFixed(3) + ' ' + p0[1].toFixed(3)
                 + ' A' + R + ' ' + R + ' 0 ' + large + ' 1 ' + p1[0].toFixed(3) + ' ' + p1[1].toFixed(3) + ' Z"'
-                + ' fill="' + fill + '" stroke="var(--slice-stroke)" stroke-width=".45"></path>';
+                + ' fill="' + seg.color + '" stroke="var(--slice-stroke)" stroke-width=".45"></path>';
       }
 
-      if (showLabels) {
-        const mid = a0 + seg / 2;
-        // Un nom long reduit son corps de texte plutot que d'etre tronque.
-        let fs = Math.min(fsMax, LEN / (0.55 * Math.max(1, r.name.length)));
-        fs = Math.max(fs, Math.min(fsMax, 2.4));
-        const maxChars = Math.max(3, Math.floor(LEN / (0.55 * fs)));
-        const txt = r.name.length > maxChars ? r.name.slice(0, maxChars - 1) + '…' : r.name;
-        // Le texte est pose sur le rayon du haut puis pivote a sa place ; sur la
-        // moitie gauche il est retourne pour rester lisible a l'endroit.
-        const flip = mid < 180 ? -90 : 90;
-        labels += '<text class="slice-label"'
-                + ' transform="rotate(' + mid.toFixed(3) + ' ' + CX + ' ' + CY + ') rotate(' + flip + ' ' + CX + ' ' + (CY - RT) + ')"'
-                + ' x="' + CX + '" y="' + (CY - RT) + '" text-anchor="middle" dominant-baseline="central"'
-                + ' font-size="' + fs.toFixed(2) + '" fill="' + textOn(fill) + '">' + esc(txt) + '</text>';
-      }
-    }
+      const mid = seg.start + span / 2;
+      const text = numbered ? String(i + 1) : seg.res.name;
+      // Le corps du texte est borné par l'épaisseur tangentielle de la part…
+      const fsMax = clamp((2 * Math.PI * RT * (span / 360)) * 0.62, 1.9, 5.4);
+      // …puis réduit si le nom est long, plutôt que de le tronquer.
+      let fs = Math.min(fsMax, LEN / (0.55 * Math.max(1, text.length)));
+      fs = Math.max(fs, Math.min(fsMax, 2.4));
+      if (fs < 1.7) return;                      // part trop fine : pas d'étiquette
+
+      const maxChars = Math.max(3, Math.floor(LEN / (0.55 * fs)));
+      const txt = text.length > maxChars ? text.slice(0, maxChars - 1) + '…' : text;
+      // Texte posé sur le rayon du haut puis pivoté ; retourné sur la moitié
+      // gauche pour rester lisible à l'endroit.
+      const flip = mid < 180 ? -90 : 90;
+      labels += '<text class="slice-label"'
+              + ' transform="rotate(' + mid.toFixed(3) + ' ' + CX + ' ' + CY + ') rotate(' + flip + ' ' + CX + ' ' + (CY - RT) + ')"'
+              + ' x="' + CX + '" y="' + (CY - RT) + '" text-anchor="middle" dominant-baseline="central"'
+              + ' font-size="' + fs.toFixed(2) + '" fill="' + textOn(seg.color) + '">' + esc(txt) + '</text>';
+    });
 
     gSlices.innerHTML = slices;
     gLabels.innerHTML = labels;
     rotor.style.transform = 'rotate(' + rotation + 'deg)';
+    renderLegend(numbered);
+  }
+
+  /** Légende numérotée, affichée seulement quand les parts portent des numéros. */
+  function renderLegend(show) {
+    const card = $('#legendCard');
+    card.hidden = !show;
+    if (!show) return;
+    $('#legendList').innerHTML = segments.map((seg, i) =>
+      '<li><span class="n">' + (i + 1) + '</span>'
+      + '<span class="dot" style="background:' + esc(seg.color) + '"></span>'
+      + '<span class="nm">' + esc(seg.res.name) + '</span></li>').join('');
   }
 
   function setSpinEnabled(on) {
@@ -1143,33 +1763,50 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
    * Courbe d'animation : accélération douce sur les 12 premiers pour cent,
    * puis longue décélération (quartique). Continue et dérivable en t = 0,12.
    */
-  function ease(t) {
-    const p = t < 0.12 ? (t * t) / 0.24 : t - 0.06;
+  function ease(t2) {
+    const p = t2 < 0.12 ? (t2 * t2) / 0.24 : t2 - 0.06;
     const u = p / 0.94;
     return 1 - Math.pow(1 - u, 4);
+  }
+
+  /** Tirage pondéré parmi les indices candidats. */
+  function weightedPick(indices) {
+    const total = indices.reduce((s, i) => s + (segments[i].res.weight || 1), 0);
+    let x = Math.random() * total;
+    for (let k = 0; k < indices.length; k++) {
+      x -= segments[indices[k]].res.weight || 1;
+      if (x <= 0) return indices[k];
+    }
+    return indices[indices.length - 1];
   }
 
   let rafId = null;
 
   function spin() {
     if (spinning) return;
-    const list = activeResults();            // fige la liste pour toute la rotation
-    if (!list.length) { toast("Cochez au moins un résultat dans l'onglet Gestion."); return; }
+    if (!segments.length) { toast(t('tNoActive')); return; }
+
+    const opts = P().options;
+    let candidates = segments.map((_, i) => i);
+    // « Éviter le dernier » : la part reste sur la roue, mais n'est plus visée.
+    if (opts.avoidRepeat && P().last && candidates.length > 1) {
+      const filtered = candidates.filter((i) => segments[i].res.id !== P().last.id);
+      if (filtered.length) candidates = filtered;
+    }
 
     spinning = true;
     setSpinEnabled(false);
     $('#resultCard').classList.remove('pop');
 
-    const n = list.length;
-    const seg = 360 / n;
-    const winner = Math.floor(Math.random() * n);            // tirage uniforme
+    const winner = weightedPick(candidates);
+    const seg = segments[winner];
+    const span = seg.end - seg.start;
 
-    // Angle visé (repère de la roue) : centre du secteur + petit décalage aléatoire.
-    const jitter = (Math.random() - 0.5) * seg * 0.66;
-    const targetWheelAngle = winner * seg + seg / 2 + jitter;
+    // Angle visé (repère de la roue) : centre de la part + petit décalage aléatoire.
+    const targetWheelAngle = seg.start + span * (0.5 + (Math.random() - 0.5) * 0.66);
     const targetMod = ((360 - targetWheelAngle) % 360 + 360) % 360;
     const startMod = ((rotation % 360) + 360) % 360;
-    const turns = 4 + Math.floor(Math.random() * 3);         // 4 à 6 tours complets
+    const turns = 4 + Math.floor(Math.random() * 3);
     const delta = ((targetMod - startMod + 360) % 360) + turns * 360;
 
     const start = rotation;
@@ -1178,72 +1815,91 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     let lastIdx = -1;
 
     function frame(now) {
-      const t = clamp((now - t0) / dur, 0, 1);
-      rotation = start + delta * ease(t);
+      const p = clamp((now - t0) / dur, 0, 1);
+      rotation = start + delta * ease(p);
       rotor.style.transform = 'rotate(' + rotation + 'deg)';
 
-      const idx = indexAtPointer(rotation, n);              // clic à chaque secteur franchi
-      if (idx !== lastIdx) { lastIdx = idx; if (t < 0.995) playTick(1 - t); }
+      const idx = indexAtPointer(rotation);          // clic à chaque part franchie
+      if (idx !== lastIdx) { lastIdx = idx; if (p < 0.995) playTick(1 - p); }
 
-      if (t < 1) { rafId = requestAnimationFrame(frame); }
-      else { rotation = start + delta; spinning = false; finish(list[winner]); }
+      if (p < 1) { rafId = requestAnimationFrame(frame); }
+      else { rotation = start + delta; spinning = false; finish(seg.res); }
     }
     rafId = requestAnimationFrame(frame);
   }
 
-  /** Fin de rotation : affichage, historique, statistiques, effets. */
+  /** Fin de rotation : affichage, historique, statistiques, effets, options. */
   function finish(res) {
+    const p = P();
     const cat = catById(res.cat);
-    state.last = {
-      id: res.id,
-      name: res.name,
-      desc: res.desc,
-      color: cat ? cat.color : '#888888',
-      catName: cat ? cat.name : ''
+    p.last = {
+      id: res.id, name: res.name, desc: res.desc,
+      color: cat ? cat.color : '#888888', catName: cat ? cat.name : ''
     };
-    state.history.unshift({ name: res.name, color: state.last.color, at: Date.now() });
-    state.history = state.history.slice(0, MAX_HISTORY);
-    state.stats.total += 1;
-    state.stats.counts[res.id] = (state.stats.counts[res.id] || 0) + 1;
+    p.history.unshift({ name: res.name, color: p.last.color, at: Date.now() });
+    p.history = p.history.slice(0, MAX_HISTORY);
+    p.stats.total += 1;
+    p.stats.counts[res.id] = (p.stats.counts[res.id] || 0) + 1;
+
+    // Tirage sans remise : la part sortie quitte la roue.
+    let exhausted = false;
+    if (p.options.removeOnDraw) {
+      res.active = false;
+      exhausted = orderedActive().length === 0;
+      wheelDirty = true;
+    }
     save();
 
     renderResult(true);
     renderHistory();
     setSpinEnabled(true);
     playWin();
-    confetti(state.last.color);
+    confetti(p.last.color);
 
     if (wheelDirty) { wheelDirty = false; renderWheel(); }
+    updateCounters();
+    if (!$('#panel-gestion').hidden) renderGestion();
+
+    if (exhausted) {
+      toastUndo(t('tExhausted'), () => {
+        P().results.forEach((r) => { r.active = true; });
+        save(); renderWheel(); updateCounters();
+        if (!$('#panel-gestion').hidden) renderGestion();
+      }, t('tRecheck'), 8000);
+    }
   }
 
   spinBtn.addEventListener('click', spin);
   hubBtn.addEventListener('click', spin);
 
-  // Entrée = lancer, sauf si l'on est en train de saisir du texte ou dans une modale.
+  // Entrée = lancer, sauf pendant une saisie ou lorsqu'une modale est ouverte.
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('presenting') && $('#modalBackdrop').hidden) {
+      setPresenting(false); return;
+    }
     if (e.key !== 'Enter' || e.repeat) return;
     if (!$('#modalBackdrop').hidden) return;
     const el = document.activeElement;
-    if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable || el.tagName === 'BUTTON')) return;
+    if (el && (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName) || el.isContentEditable)) return;
     if ($('#panel-roue').hidden) return;
     e.preventDefault();
     spin();
   });
 
-  /* --- Affichage du résultat, de l'historique et des statistiques --- */
+  /* --- Résultat, historique, statistiques --- */
 
   function renderResult(animate) {
     const card = $('#resultCard');
-    const last = state.last;
+    const last = P().last;
     if (!last) {
       $('#resultTitle').textContent = '—';
-      $('#resultDesc').textContent = 'Lancez la roue pour découvrir votre résultat.';
+      $('#resultDesc').textContent = t('resultEmpty');
       $('#resultTag').hidden = true;
       card.style.setProperty('--glow-c', 'transparent');
       return;
     }
     $('#resultTitle').textContent = last.name;
-    $('#resultDesc').textContent = last.desc || 'Aucune description pour ce résultat.';
+    $('#resultDesc').textContent = last.desc || t('noDesc');
     $('#resultTag').hidden = !last.catName;
     $('#resultCat').textContent = last.catName || '';
     $('#resultDot').style.background = last.color;
@@ -1251,26 +1907,29 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     if (animate) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
   }
 
+  /** Heure seule pour aujourd'hui, date abrégée au-delà. */
+  function stamp(ms) {
+    const d = new Date(ms), now = new Date();
+    const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    if (d.toDateString() === now.toDateString()) return hm;
+    return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + hm;
+  }
+
   function renderHistory() {
+    const p = P();
     const ol = $('#histList');
-    if (!state.history.length) {
-      ol.innerHTML = '<li class="empty">Aucun tirage pour le moment.</li>';
-    } else {
-      ol.innerHTML = state.history.map((h) => {
-        const d = new Date(h.at);
-        const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-        return '<li><span class="dot" style="background:' + esc(normalizeHex(h.color)) + '"></span>'
-             + '<span class="h-name">' + esc(h.name) + '</span><span class="h-time">' + hh + '</span></li>';
-      }).join('');
-    }
+    ol.innerHTML = p.history.length
+      ? p.history.map((h) =>
+          '<li><span class="dot" style="background:' + esc(normalizeHex(h.color)) + '"></span>'
+          + '<span class="h-name">' + esc(h.name) + '</span>'
+          + '<span class="h-time">' + esc(stamp(h.at)) + '</span></li>').join('')
+      : '<li class="empty">' + esc(t('noDraw')) + '</li>';
 
-    const total = state.stats.total;
-    $('#statTotal').textContent = total
-      ? total + ' tirage(s) enregistré(s).'
-      : 'Aucun tirage pour le moment.';
+    $('#exportHist').disabled = !p.history.length;
+    $('#statTotal').textContent = p.stats.total ? t('drawCount', p.stats.total) : t('noDraw');
 
-    const top = Object.keys(state.stats.counts)
-      .map((id) => ({ res: resById(id), n: state.stats.counts[id] }))
+    const top = Object.keys(p.stats.counts)
+      .map((id) => ({ res: resById(id), n: p.stats.counts[id] }))
       .filter((x) => x.res)
       .sort((a, b) => b.n - a.n)
       .slice(0, 4);
@@ -1278,58 +1937,67 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     $('#statTop').innerHTML = top.length
       ? top.map((x) => {
           const cat = catById(x.res.cat);
+          const col = normalizeHex(cat ? cat.color : '#888888');
           const pct = Math.round((x.n / Math.max(1, top[0].n)) * 100);
-          return '<div class="stat-row"><span class="dot" style="background:' + esc(normalizeHex(cat ? cat.color : '#888')) + '"></span>'
+          return '<div class="stat-row"><span class="dot" style="background:' + esc(col) + '"></span>'
                + '<span class="h-name" style="min-width:70px">' + esc(x.res.name) + '</span>'
-               + '<span class="bar"><i style="width:' + pct + '%;background:' + esc(normalizeHex(cat ? cat.color : '#888')) + '"></i></span>'
+               + '<span class="bar"><i style="width:' + pct + '%;background:' + esc(col) + '"></i></span>'
                + '<span class="stat-n">' + x.n + '</span></div>';
         }).join('')
       : '';
   }
 
   $('#clearHist').addEventListener('click', () => {
-    state.history = []; save(); renderHistory(); toast('Historique vide.');
+    const p = P(), backup = p.history.slice();
+    if (!backup.length) return;
+    p.history = []; save(); renderHistory();
+    toastUndo(t('tHistCleared'), () => { P().history = backup; save(); renderHistory(); });
   });
 
   $('#clearStats').addEventListener('click', async () => {
-    if (!(await confirmDialog('Remettre les statistiques à zéro ?', 'Les compteurs de tirage seront effacés.'))) return;
-    state.stats = { total: 0, counts: {} }; save(); renderHistory(); toast('Statistiques remises à zéro.');
+    if (!(await confirmDialog(t('resetZero'), t('statsTitle')))) return;
+    const p = P(), backup = p.stats;
+    p.stats = { total: 0, counts: {} }; save(); renderHistory();
+    toastUndo(t('tStatsCleared'), () => { P().stats = backup; save(); renderHistory(); });
   });
 
-  /* == E. Onglet Gestion ================================================== */
+  $('#exportHist').addEventListener('click', () => {
+    const rows = [[t('csvDate'), t('csvResult')]].concat(
+      P().history.map((h) => [new Date(h.at).toISOString(), h.name]));
+    const csv = rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+    textModal(t('histTitle'), t('histBody'), csv, 'historique-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
+  });
+
+  /* == F. Onglet Gestion ================================================== */
 
   const NEW_CAT = '__new__';
+  let search = '';
 
-  // Icones inline : contrairement aux emojis, elles suivent la couleur du theme.
-  const ICO_EDIT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
-    + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  // Icônes inline : contrairement aux emojis, elles suivent la couleur du thème.
+  const ICO_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
     + '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
-  const ICO_DEL = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
-    + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  const ICO_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
     + '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path>'
     + '<path d="M10 11v6M14 11v6"></path></svg>';
-  const PALETTE = ['#d64545', '#e08a1e', '#c9a227', '#2f8f6f', '#2b7bb9', '#6a4fb6', '#c2559b', '#5a6b7d'];
 
-  /** Remplit un <select> avec les catégories (option « nouvelle » optionnelle). */
+  const fCat = $('#fCat'), fColor = $('#fColor'), fNewWrap = $('#fNewWrap'), fNewCat = $('#fNewCat');
+  const catList = $('#catList');
+
   function fillCatSelect(sel, selectedId, withNew) {
-    sel.innerHTML = state.categories
+    sel.innerHTML = P().categories
       .map((c) => '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>').join('')
-      + (withNew ? '<option value="' + NEW_CAT + '">+ Nouvelle catégorie…</option>' : '');
+      + (withNew ? '<option value="' + NEW_CAT + '">' + esc(t('newCatOption')) + '</option>' : '');
     if (selectedId) sel.value = selectedId;
     if (!sel.value && sel.options.length) sel.selectedIndex = 0;
   }
 
-  const fCat = $('#fCat'), fColor = $('#fColor'), fNewWrap = $('#fNewWrap'), fNewCat = $('#fNewCat');
-
   function syncCreateForm() {
-    const isNew = fCat.value === NEW_CAT || !state.categories.length;
+    const isNew = fCat.value === NEW_CAT || !P().categories.length;
     fNewWrap.hidden = !isNew;
-    if (isNew) {
-      fColor.value = PALETTE[state.categories.length % PALETTE.length];
-    } else {
-      const c = catById(fCat.value);
-      if (c) fColor.value = normalizeHex(c.color);
-    }
+    if (isNew) fColor.value = PALETTE[P().categories.length % PALETTE.length];
+    else { const c = catById(fCat.value); if (c) fColor.value = normalizeHex(c.color); }
   }
 
   fCat.addEventListener('change', syncCreateForm);
@@ -1344,47 +2012,79 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
   $('#createForm').addEventListener('submit', (e) => {
     e.preventDefault();
+    const p = P();
     const name = $('#fName').value.trim();
-    if (!name) { $('#fName').focus(); toast('Le nom du résultat est obligatoire.'); return; }
+    if (!name) { $('#fName').focus(); toast(t('tNameRequired')); return; }
 
     let catId = fCat.value;
-    if (catId === NEW_CAT || !state.categories.length) {
+    if (catId === NEW_CAT || !p.categories.length) {
       const cname = fNewCat.value.trim();
-      if (!cname) { fNewCat.focus(); toast('Donnez un nom à la nouvelle catégorie.'); return; }
-      const cat = { id: uid(), name: cname, color: normalizeHex(fColor.value), collapsed: false };
-      state.categories.push(cat);
+      if (!cname) { fNewCat.focus(); toast(t('tCatRequired')); return; }
+      const cat = { id: uid(), name: cname.slice(0, 40), color: normalizeHex(fColor.value), collapsed: false };
+      p.categories.push(cat);
       catId = cat.id;
       fNewCat.value = '';
     }
 
-    state.results.push({ id: uid(), name: name, desc: $('#fDesc').value.trim(), cat: catId, active: true });
+    p.results.push({
+      id: uid(), name: name, desc: $('#fDesc').value.trim(), cat: catId,
+      active: true, weight: clamp(Math.round(Number($('#fWeight').value) || 1), 1, MAX_WEIGHT)
+    });
     save();
 
-    $('#fName').value = ''; $('#fDesc').value = '';
+    $('#fName').value = ''; $('#fDesc').value = ''; $('#fWeight').value = '1';
     fillCatSelect(fCat, catId, true);
     syncCreateForm();
     renderGestion(); renderWheel();
     $('#fName').focus();
-    toast('« ' + name + ' » ajoute.');
+    toast(t('tAdded', name));
   });
 
-  /** Met à jour les compteurs (barre latérale + barre d'outils). */
+  /* --- Options de la roue --- */
+  $('#optRemove').addEventListener('change', (e) => { P().options.removeOnDraw = e.target.checked; save(); });
+  $('#optAvoid').addEventListener('change', (e) => { P().options.avoidRepeat = e.target.checked; save(); });
+
+  /* --- Recherche --- */
+  $('#search').addEventListener('input', (e) => {
+    search = e.target.value.trim();
+    $('#searchClear').hidden = !search;
+    renderGestion();
+  });
+  $('#searchClear').addEventListener('click', () => {
+    search = ''; $('#search').value = ''; $('#searchClear').hidden = true;
+    renderGestion(); $('#search').focus();
+  });
+
+  const matches = (r) => !search || fold(r.name + ' ' + r.desc).indexOf(fold(search)) >= 0;
+
+  /* --- Tout cocher / tout décocher (sur ce qui est affiché) --- */
+  function setAllVisible(on) {
+    const touched = P().results.filter((r) => matches(r) && r.active !== on);
+    if (!touched.length) return;
+    touched.forEach((r) => { r.active = on; });
+    save(); renderGestion(); renderWheel();
+    toastUndo(on ? t('checkAll') : t('uncheckAll'), () => {
+      touched.forEach((r) => { r.active = !on; });
+      save(); renderGestion(); renderWheel();
+    });
+  }
+  $('#btnCheckAll').addEventListener('click', () => setAllVisible(true));
+  $('#btnUncheckAll').addEventListener('click', () => setAllVisible(false));
+
+  /* --- Compteurs et en-têtes --- */
   function updateCounters() {
-    const nb = activeResults().length;
+    const nb = orderedActive().length;
     $('#countActive').textContent = nb;
-    $('#countTotal').textContent = state.results.length;
+    $('#countLbl').textContent = t('countOf', totalResults());
     $('#sideCount').textContent = nb;
-    $('#sideCats').textContent = state.categories.length + ' catégorie(s)';
+    $('#sideCountLbl').textContent = t('resultsActive');
+    $('#sideCats').textContent = t('catCount', P().categories.length);
   }
 
-  /**
-   * Rafraîchit le badge et la case d'une seule catégorie.
-   * Évite de reconstruire toute la liste (et donc de perdre le focus clavier).
-   */
   function refreshCatHeader(catId) {
     const sec = catList.querySelector('.cat[data-cat="' + catId + '"]');
     if (!sec) return;
-    const items = state.results.filter((r) => r.cat === catId);
+    const items = P().results.filter((r) => r.cat === catId);
     const on = items.filter((r) => r.active).length;
     sec.querySelector('.badge').textContent = on + '/' + items.length;
     const box = sec.querySelector('input[data-act="toggle-cat"]');
@@ -1396,61 +2096,101 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
   /** Reconstruit la liste des catégories et de leurs résultats. */
   function renderGestion() {
-    fillCatSelect(fCat, fCat.value && fCat.value !== NEW_CAT ? fCat.value : null, true);
+    const p = P();
+    fillCatSelect(fCat, fCat.value && fCat.value !== NEW_CAT && catById(fCat.value) ? fCat.value : null, true);
     syncCreateForm();
     updateCounters();
+    $('#optRemove').checked = !!p.options.removeOnDraw;
+    $('#optAvoid').checked = !!p.options.avoidRepeat;
 
-    const list = $('#catList');
-    if (!state.categories.length) {
-      list.innerHTML = '<div class="card empty">Aucune catégorie. Créez-en une avec le formulaire ci-dessus.</div>';
+    if (!p.categories.length) {
+      catList.innerHTML = '<div class="card empty">' + esc(t('noCategory')) + '</div>';
       return;
     }
 
-    list.innerHTML = state.categories.map((cat) => {
-      const items = state.results.filter((r) => r.cat === cat.id);
-      const on = items.filter((r) => r.active).length;
+    const filtering = !!search;
+    let shown = 0;
+
+    const html = p.categories.map((cat, ci) => {
+      const all = p.results.filter((r) => r.cat === cat.id);
+      const items = all.filter(matches);
+      if (filtering && !items.length) return '';
+      shown += items.length;
+
+      const on = all.filter((r) => r.active).length;
       const color = normalizeHex(cat.color);
 
-      const rows = items.length
-        ? items.map((r) => (
-            '<div class="res' + (r.active ? '' : ' off') + '" data-id="' + esc(r.id) + '"'
-            + ' title="' + esc(r.desc || 'Aucune description') + '">'
-            + '<label class="cb-wrap"><input type="checkbox" class="cb" data-act="toggle-res" data-id="' + esc(r.id) + '"'
-            + (r.active ? ' checked' : '') + ' aria-label="Inclure ' + esc(r.name) + ' dans la roue"></label>'
-            + '<button class="res-main" data-act="edit" data-id="' + esc(r.id) + '">'
-            + '<div class="res-name">' + esc(r.name) + '</div>'
-            + '<div class="res-desc">' + esc(r.desc || 'Aucune description') + '</div></button>'
-            + '<button class="icon-btn" data-act="edit" data-id="' + esc(r.id) + '" aria-label="Modifier ' + esc(r.name) + '">' + ICO_EDIT + '</button>'
-            + '<button class="icon-btn danger" data-act="del-res" data-id="' + esc(r.id) + '" aria-label="Supprimer ' + esc(r.name) + '">' + ICO_DEL + '</button>'
-            + '</div>'
-          )).join('')
-        : '<p class="empty">Catégorie vide.</p>';
+      const rows = items.length ? items.map((r) => {
+        const pos = all.indexOf(r);
+        return '<div class="res' + (r.active ? '' : ' off') + '" data-id="' + esc(r.id) + '"'
+          + ' title="' + esc(r.desc || t('noDesc')) + '">'
+          + '<label class="cb-wrap"><input type="checkbox" class="cb" data-act="toggle-res" data-id="' + esc(r.id) + '"'
+          + (r.active ? ' checked' : '') + ' aria-label="' + esc(t('includeIn', r.name)) + '"></label>'
+          + '<span class="reorder">'
+          + '<button data-act="up" data-id="' + esc(r.id) + '" aria-label="' + esc(t('moveUp', r.name)) + '"'
+          + (filtering || pos === 0 ? ' disabled' : '') + '>&#9650;</button>'
+          + '<button data-act="down" data-id="' + esc(r.id) + '" aria-label="' + esc(t('moveDown', r.name)) + '"'
+          + (filtering || pos === all.length - 1 ? ' disabled' : '') + '>&#9660;</button>'
+          + '</span>'
+          + '<button class="res-main" data-act="edit" data-id="' + esc(r.id) + '">'
+          + '<div class="res-name">' + esc(r.name) + '</div>'
+          + '<div class="res-desc">' + esc(r.desc || t('noDesc')) + '</div></button>'
+          + '<input class="weight' + (r.weight > 1 ? ' w-on' : '') + '" type="number" min="1" max="' + MAX_WEIGHT + '" step="1" value="' + r.weight + '"'
+          + ' data-act="weight" data-id="' + esc(r.id) + '" aria-label="' + esc(t('weightOf', r.name)) + '">'
+          + '<button class="icon-btn" data-act="edit" data-id="' + esc(r.id) + '" aria-label="' + esc(t('edit', r.name)) + '">' + ICO_EDIT + '</button>'
+          + '<button class="icon-btn danger" data-act="del-res" data-id="' + esc(r.id) + '" aria-label="' + esc(t('del', r.name)) + '">' + ICO_DEL + '</button>'
+          + '</div>';
+      }).join('') : '<p class="empty">' + esc(t('catEmpty')) + '</p>';
 
-      return '<section class="cat' + (cat.collapsed ? ' collapsed' : '') + '" data-cat="' + esc(cat.id) + '" style="--cat-c:' + esc(color) + '">'
+      return '<section class="cat' + (cat.collapsed && !filtering ? ' collapsed' : '') + '" data-cat="' + esc(cat.id) + '" style="--cat-c:' + esc(color) + '">'
         + '<header class="cat-head">'
         + '<label class="cb-wrap"><input type="checkbox" class="cb" data-act="toggle-cat" data-id="' + esc(cat.id) + '"'
-        + (items.length && on === items.length ? ' checked' : '') + (items.length ? '' : ' disabled')
-        + ' aria-label="Afficher tous les résultats de ' + esc(cat.name) + '"></label>'
-        + '<button class="icon-btn" data-act="fold" data-id="' + esc(cat.id) + '" aria-label="Plier ou déplier ' + esc(cat.name) + '" aria-expanded="' + (!cat.collapsed) + '"><span class="chev">&#9660;</span></button>'
-        + '<input class="cat-name" value="' + esc(cat.name) + '" maxlength="40" data-act="rename" data-id="' + esc(cat.id) + '" aria-label="Nom de la catégorie">'
-        + '<span class="badge">' + on + '/' + items.length + '</span>'
-        + '<input type="color" value="' + esc(color) + '" data-act="recolor" data-id="' + esc(cat.id) + '" aria-label="Couleur de ' + esc(cat.name) + '">'
-        + '<button class="icon-btn danger" data-act="del-cat" data-id="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.name) + '">' + ICO_DEL + '</button>'
+        + (all.length && on === all.length ? ' checked' : '') + (all.length ? '' : ' disabled')
+        + ' aria-label="' + esc(t('showAllOf', cat.name)) + '"></label>'
+        + '<span class="reorder">'
+        + '<button data-act="cat-up" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('moveUp', cat.name)) + '"' + (ci === 0 ? ' disabled' : '') + '>&#9650;</button>'
+        + '<button data-act="cat-down" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('moveDown', cat.name)) + '"' + (ci === p.categories.length - 1 ? ' disabled' : '') + '>&#9660;</button>'
+        + '</span>'
+        + '<button class="icon-btn" data-act="fold" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('fold', cat.name)) + '" aria-expanded="' + (!cat.collapsed) + '"><span class="chev">&#9660;</span></button>'
+        + '<input class="cat-name" value="' + esc(cat.name) + '" maxlength="40" data-act="rename" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('catName')) + '">'
+        + '<span class="badge">' + on + '/' + all.length + '</span>'
+        + '<input type="color" value="' + esc(color) + '" data-act="recolor" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('catColor', cat.name)) + '">'
+        + '<button class="icon-btn danger" data-act="del-cat" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('delCat', cat.name)) + '">' + ICO_DEL + '</button>'
         + '</header>'
         + '<div class="cat-body">' + rows + '</div></section>';
     }).join('');
 
-    // Case de catégorie partiellement cochée -> état indéterminé
-    state.categories.forEach((cat) => {
-      const items = state.results.filter((r) => r.cat === cat.id);
-      const on = items.filter((r) => r.active).length;
-      const box = list.querySelector('input[data-act="toggle-cat"][data-id="' + cat.id + '"]');
-      if (box) box.indeterminate = items.length > 0 && on > 0 && on < items.length;
-    });
+    catList.innerHTML = (filtering && shown === 0)
+      ? '<div class="card empty">' + esc(t('noMatch', search)) + '</div>'
+      : html;
+
+    p.categories.forEach((cat) => refreshCatHeader(cat.id));
+  }
+
+  /* --- Réordonnancement --- */
+  function moveResult(id, dir) {
+    const p = P();
+    const r = resById(id);
+    if (!r) return;
+    const sameCat = p.results.filter((x) => x.cat === r.cat);
+    const pos = sameCat.indexOf(r);
+    const target = sameCat[pos + dir];
+    if (!target) return;
+    const i = p.results.indexOf(r), j = p.results.indexOf(target);
+    p.results[i] = target; p.results[j] = r;
+    save(); renderGestion(); renderWheel();
+  }
+
+  function moveCategory(id, dir) {
+    const p = P();
+    const i = p.categories.findIndex((c) => c.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= p.categories.length) return;
+    const tmp = p.categories[i]; p.categories[i] = p.categories[j]; p.categories[j] = tmp;
+    save(); renderGestion(); renderWheel();
   }
 
   /* --- Événements délégués sur la liste --- */
-  const catList = $('#catList');
 
   catList.addEventListener('change', (e) => {
     const el = e.target.closest('[data-act]');
@@ -1458,16 +2198,14 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     const act = el.dataset.act, id = el.dataset.id;
 
     if (act === 'toggle-res') {
-      const r = resById(id);
-      if (!r) return;
+      const r = resById(id); if (!r) return;
       r.active = el.checked;
       const row = el.closest('.res');
       if (row) row.classList.toggle('off', !r.active);
       refreshCatHeader(r.cat);
 
     } else if (act === 'toggle-cat') {
-      // La case d'en-tête pilote tous les résultats de la catégorie.
-      state.results.forEach((r) => { if (r.cat === id) r.active = el.checked; });
+      P().results.forEach((r) => { if (r.cat === id) r.active = el.checked; });
       const sec = el.closest('.cat');
       if (sec) $$('.res', sec).forEach((row) => {
         row.classList.toggle('off', !el.checked);
@@ -1477,11 +2215,16 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
       el.indeterminate = false;
       refreshCatHeader(id);
 
+    } else if (act === 'weight') {
+      const r = resById(id); if (!r) return;
+      r.weight = clamp(Math.round(Number(el.value) || 1), 1, MAX_WEIGHT);
+      el.value = r.weight;
+      el.classList.toggle('w-on', r.weight > 1);
+
     } else if (act === 'rename') {
       const c = catById(id);
-      if (c) c.name = el.value.trim() || c.name;
+      if (c) c.name = el.value.trim().slice(0, 40) || c.name;
       el.value = c ? c.name : el.value;
-      // Un renommage change aussi la liste déroulante : re-rendu complet.
       save(); renderGestion(); renderWheel();
       return;
 
@@ -1507,6 +2250,7 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     const el = e.target.closest('button[data-act]');
     if (!el) return;
     const act = el.dataset.act, id = el.dataset.id;
+    const p = P();
 
     if (act === 'fold') {
       const c = catById(id); if (!c) return;
@@ -1514,54 +2258,69 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
       el.closest('.cat').classList.toggle('collapsed', c.collapsed);
       el.setAttribute('aria-expanded', String(!c.collapsed));
       save();
-    } else if (act === 'edit') {
-      openEditModal(id);
+
+    } else if (act === 'up') { moveResult(id, -1);
+    } else if (act === 'down') { moveResult(id, 1);
+    } else if (act === 'cat-up') { moveCategory(id, -1);
+    } else if (act === 'cat-down') { moveCategory(id, 1);
+    } else if (act === 'edit') { openEditModal(id);
+
     } else if (act === 'del-res') {
       const r = resById(id); if (!r) return;
-      if (!(await confirmDialog('Supprimer « ' + r.name + ' » ?', 'Ce résultat sera définitivement retiré de la liste.'))) return;
-      state.results = state.results.filter((x) => x.id !== id);
-      save(); renderGestion(); renderWheel(); toast('Résultat supprimé.');
+      if (!(await confirmDialog(t('delResultTitle', r.name), t('delResultBody')))) return;
+      const idx = p.results.indexOf(r);
+      p.results.splice(idx, 1);
+      save(); renderGestion(); renderWheel();
+      toastUndo(t('tDelResult'), () => {
+        P().results.splice(idx, 0, r);
+        save(); renderGestion(); renderWheel();
+      });
+
     } else if (act === 'del-cat') {
       const c = catById(id); if (!c) return;
-      const n = state.results.filter((r) => r.cat === id).length;
-      const msg = n ? 'La catégorie et ses ' + n + ' résultat(s) seront supprimés.' : 'Cette catégorie est vide.';
-      if (!(await confirmDialog('Supprimer la catégorie « ' + c.name + ' » ?', msg))) return;
-      state.categories = state.categories.filter((x) => x.id !== id);
-      state.results = state.results.filter((r) => r.cat !== id);
-      save(); renderGestion(); renderWheel(); toast('Catégorie supprimée.');
+      const kept = p.results.filter((r) => r.cat === id);
+      const msg = kept.length ? t('delCatBody', kept.length) : t('delCatBodyEmpty');
+      if (!(await confirmDialog(t('delCatTitle', c.name), msg))) return;
+      const ci = p.categories.indexOf(c);
+      const snapshot = p.results.slice();
+      p.categories.splice(ci, 1);
+      p.results = p.results.filter((r) => r.cat !== id);
+      save(); renderGestion(); renderWheel();
+      toastUndo(t('tDelCat'), () => {
+        const q = P();
+        q.categories.splice(ci, 0, c);
+        q.results = snapshot;
+        save(); renderGestion(); renderWheel();
+      });
     }
   });
 
-  /** Met à jour la pastille de couleur du dernier résultat si sa catégorie a change. */
+  /** Met à jour la pastille de couleur du dernier résultat si sa catégorie a changé. */
   function renderResultDot() {
-    if (!state.last || !state.last.id) return;
-    const r = resById(state.last.id);
+    const last = P().last;
+    if (!last || !last.id) return;
+    const r = resById(last.id);
     const c = r ? catById(r.cat) : null;
     if (!c) return;
-    state.last.color = normalizeHex(c.color);
-    state.last.catName = c.name;
-    $('#resultDot').style.background = state.last.color;
+    last.color = normalizeHex(c.color);
+    last.catName = c.name;
+    $('#resultDot').style.background = last.color;
     $('#resultCat').textContent = c.name;
-    $('#resultCard').style.setProperty('--glow-c', state.last.color);
+    $('#resultCard').style.setProperty('--glow-c', last.color);
   }
 
-  /* == F. Modale, toast, import / export ================================== */
+  /* == G. Modale, toast, annulation ======================================= */
 
   const backdrop = $('#modalBackdrop');
   const modalBody = $('#modalBody');
   const modalFoot = $('#modalFoot');
   let lastFocus = null;
 
-  /**
-   * Ouvre la modale générique.
-   * @param {{title:string, body:string, buttons:Array, onOpen?:Function}} opts
-   */
   function openModal(opts) {
     lastFocus = document.activeElement;
     $('#modalTitle').textContent = opts.title;
     modalBody.innerHTML = opts.body;
     modalFoot.innerHTML = '';
-
     (opts.buttons || []).forEach((b) => {
       const btn = document.createElement('button');
       btn.className = 'btn ' + (b.cls || '');
@@ -1569,7 +2328,6 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
       btn.addEventListener('click', () => b.onClick && b.onClick());
       modalFoot.appendChild(btn);
     });
-
     backdrop.hidden = false;
     if (opts.onOpen) opts.onOpen();
     const first = modalBody.querySelector('input,textarea,select,button') || $('#modalClose');
@@ -1605,148 +2363,253 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
         title: title,
         body: '<p>' + esc(text || '') + '</p>',
         buttons: [
-          { label: 'Annuler', cls: 'ghost', onClick: () => { closeModal(); resolve(false); } },
-          { label: 'Confirmer', cls: 'primary', onClick: () => { closeModal(); resolve(true); } }
+          { label: t('cancel'), cls: 'ghost', onClick: () => { closeModal(); resolve(false); } },
+          { label: t('confirm'), cls: 'primary', onClick: () => { closeModal(); resolve(true); } }
         ]
       });
     });
   }
 
-  /** Modale d'édition d'un résultat : nom, description, catégorie. */
+  /** Modale d'édition d'un résultat : nom, description, catégorie, poids. */
   function openEditModal(id) {
     const r = resById(id);
     if (!r) return;
-    const opts = state.categories
+    const opts = P().categories
       .map((c) => '<option value="' + esc(c.id) + '"' + (c.id === r.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>')
       .join('');
 
     openModal({
-      title: 'Modifier le résultat',
-      body: '<label class="field"><span>Nom *</span><input class="input" id="eName" maxlength="60" value="' + esc(r.name) + '"></label>'
-          + '<label class="field"><span>Description / définition</span><textarea class="input" id="eDesc" maxlength="240">' + esc(r.desc) + '</textarea></label>'
-          + '<label class="field"><span>Catégorie</span><select class="input" id="eCat">' + opts + '</select></label>',
+      title: t('editResult'),
+      body: '<label class="field"><span>' + esc(t('fieldName')) + '</span><input class="input" id="eName" maxlength="60" value="' + esc(r.name) + '"></label>'
+          + '<label class="field"><span>' + esc(t('fieldDesc')) + '</span><textarea class="input" id="eDesc" maxlength="240">' + esc(r.desc) + '</textarea></label>'
+          + '<label class="field"><span>' + esc(t('fieldCat')) + '</span><select class="input" id="eCat">' + opts + '</select></label>'
+          + '<label class="field" style="max-width:130px"><span>' + esc(t('fieldWeight')) + '</span>'
+          + '<input class="input" type="number" id="eWeight" min="1" max="' + MAX_WEIGHT + '" step="1" value="' + r.weight + '"></label>',
       buttons: [
-        { label: 'Annuler', cls: 'ghost', onClick: closeModal },
-        { label: 'Enregistrer', cls: 'primary', onClick: () => {
+        { label: t('cancel'), cls: 'ghost', onClick: closeModal },
+        { label: t('save'), cls: 'primary', onClick: () => {
             const name = $('#eName').value.trim();
-            if (!name) { $('#eName').focus(); toast('Le nom est obligatoire.'); return; }
+            if (!name) { $('#eName').focus(); toast(t('tNameRequired')); return; }
             r.name = name;
             r.desc = $('#eDesc').value.trim();
             r.cat = $('#eCat').value;
-            if (state.last && state.last.id === r.id) { state.last.name = r.name; state.last.desc = r.desc; }
+            r.weight = clamp(Math.round(Number($('#eWeight').value) || 1), 1, MAX_WEIGHT);
+            const last = P().last;
+            if (last && last.id === r.id) { last.name = r.name; last.desc = r.desc; }
             save(); closeModal(); renderGestion(); renderWheel(); renderResult(false); renderResultDot();
-            toast('Résultat mis à jour.');
+            toast(t('tUpdated'));
           } }
       ]
     });
   }
 
-  /* --- Notifications éphémères --- */
+  /* --- Notifications éphémères, avec action facultative --- */
   let toastTimer = null;
-  function toast(msg) {
-    const t = $('#toast');
-    t.textContent = msg;
-    t.classList.add('on');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+
+  function toast(msg) { showToast(msg, null, null, 2600); }
+
+  /** Toast portant un bouton d'annulation : le filet de sécurité des suppressions. */
+  function toastUndo(msg, undo, label, ms) {
+    showToast(msg, undo, label || t('undo'), ms || 6000);
   }
 
-  /* --- Export --- */
+  function showToast(msg, action, label, ms) {
+    const el = $('#toast');
+    el.innerHTML = '<span></span>';
+    el.firstChild.textContent = msg;
+    if (action) {
+      const b = document.createElement('button');
+      b.className = 'toast-act';
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        el.classList.remove('on');
+        clearTimeout(toastTimer);
+        action();
+        toast(t('tRestored'));
+      });
+      el.appendChild(b);
+    }
+    el.style.pointerEvents = action ? 'auto' : 'none';
+    el.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('on'), ms);
+  }
+
+  /* == H. Import / export / partage ======================================= */
+
+  /** Modale « texte + copier + télécharger », partagée par les exports. */
+  function textModal(title, intro, text, filename, mime) {
+    openModal({
+      title: title,
+      body: '<p>' + esc(intro) + '</p>'
+          + '<textarea class="input" id="expArea" readonly style="min-height:180px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px">' + esc(text) + '</textarea>',
+      buttons: [
+        { label: t('close'), cls: 'ghost', onClick: closeModal },
+        { label: t('copy'), onClick: () => copyFrom($('#expArea')) },
+        { label: t('download'), cls: 'primary', onClick: () => {
+            try {
+              const blob = new Blob([text], { type: mime || 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = filename;
+              document.body.appendChild(a); a.click(); a.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch (err) { toast(t('tDownloadFail')); }
+          } }
+      ]
+    });
+  }
+
+  function copyFrom(ta) {
+    ta.select(); ta.setSelectionRange(0, ta.value.length);
+    const done = () => toast(t('tCopied'));
+    const fallback = () => { try { document.execCommand('copy'); done(); } catch (e) { toast(t('tCopyFail')); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(done, fallback);
+    else fallback();
+  }
+
   function exportPayload() {
+    const p = P();
     return JSON.stringify({
-      app: 'roue-de-fortune',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      categories: state.categories,
-      results: state.results
+      app: 'roue-de-fortune', version: 2, exportedAt: new Date().toISOString(),
+      name: p.name, options: p.options, categories: p.categories, results: p.results
     }, null, 2);
   }
 
   $('#btnExport').addEventListener('click', () => {
-    const json = exportPayload();
+    textModal(t('exportTitle'), t('exportBody'), exportPayload(),
+      'roue-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
+  });
+
+  /* --- Partage par lien : toute la roue tient dans le fragment d'URL --- */
+
+  function sharePayload() {
+    const p = P();
+    const idx = {};
+    p.categories.forEach((c, i) => { idx[c.id] = i; });
+    return {
+      n: p.name,
+      c: p.categories.map((c) => [c.name, c.color]),
+      r: p.results.map((r) => [r.name, r.desc, idx[r.cat], r.weight, r.active ? 1 : 0])
+    };
+  }
+
+  /** Reconstruit une roue à partir de la charge utile compacte d'un lien. */
+  function profileFromShare(d) {
+    if (!d || !Array.isArray(d.c) || !Array.isArray(d.r)) return null;
+    const cats = d.c.map((c) => ({ id: uid(), name: String(c[0] || '—'), color: normalizeHex(c[1]), collapsed: false }));
+    if (!cats.length) return null;
+    const results = d.r
+      .filter((r) => Array.isArray(r) && cats[r[2]])
+      .map((r) => ({
+        id: uid(), name: String(r[0] || '—'), desc: String(r[1] || ''),
+        cat: cats[r[2]].id, weight: clamp(Math.round(Number(r[3]) || 1), 1, MAX_WEIGHT),
+        active: r[4] !== 0
+      }));
+    return sanitizeProfile({
+      id: uid(), name: String(d.n || 'Roue'), categories: cats, results: results,
+      options: { removeOnDraw: false, avoidRepeat: false }
+    }, 'Roue');
+  }
+
+  $('#btnShare').addEventListener('click', () => {
+    const url = location.href.split('#')[0] + '#r=' + b64encode(JSON.stringify(sharePayload()));
     openModal({
-      title: 'Exporter la configuration',
-      body: '<p>Copiez ce JSON ou téléchargez-le pour le recharger plus tard, ou sur un autre appareil.</p>'
-          + '<textarea class="input" id="expArea" readonly style="min-height:190px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px">' + esc(json) + '</textarea>',
+      title: t('shareTitle'),
+      body: '<p>' + esc(t('shareBody')) + '</p>'
+          + (url.length > 2000 ? '<p><b>' + esc(t('shareLong', url.length)) + '</b></p>' : '')
+          + '<textarea class="input" id="expArea" readonly style="min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px">' + esc(url) + '</textarea>',
       buttons: [
-        { label: 'Fermer', cls: 'ghost', onClick: closeModal },
-        { label: 'Copier', onClick: () => {
-            const ta = $('#expArea');
-            ta.select(); ta.setSelectionRange(0, ta.value.length);
-            const done = () => toast('JSON copié dans le presse-papiers.');
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(ta.value).then(done, () => { try { document.execCommand('copy'); done(); } catch (e) { toast('Copie impossible : sélectionnez le texte.'); } });
-            } else {
-              try { document.execCommand('copy'); done(); } catch (e) { toast('Copie impossible : sélectionnez le texte.'); }
-            }
-          } },
-        { label: 'Télécharger', cls: 'primary', onClick: () => {
-            try {
-              const blob = new Blob([json], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'roue-' + new Date().toISOString().slice(0, 10) + '.json';
-              document.body.appendChild(a); a.click(); a.remove();
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
-            } catch (e) { toast('Téléchargement indisponible ici : utilisez « Copier ».'); }
-          } }
+        { label: t('close'), cls: 'ghost', onClick: closeModal },
+        { label: t('copy'), cls: 'primary', onClick: () => copyFrom($('#expArea')) }
       ]
     });
   });
 
-  /* --- Import (fichier ou copier-coller) --- */
+  /** Une roue reçue par lien : on demande quoi en faire avant de toucher aux données. */
+  function offerShared(prof) {
+    openModal({
+      title: t('sharedTitle'),
+      body: '<p>' + esc(t('sharedBody', prof.name, prof.results.length, prof.categories.length)) + '</p>',
+      buttons: [
+        { label: t('ignore'), cls: 'ghost', onClick: closeModal },
+        { label: t('mergeShared'), onClick: () => { closeModal(); mergeInto(prof); toast(t('tMerged')); } },
+        { label: t('openShared'), cls: 'primary', onClick: () => {
+            closeModal();
+            state.profiles.push(prof);
+            state.activeId = prof.id;
+            save(); renderAll(); toast(t('tSharedLoaded'));
+          } }
+      ]
+    });
+  }
+
+  /** Fusion : les catégories de même nom sont réutilisées, les doublons ignorés. */
+  function mergeInto(src) {
+    const p = P();
+    const map = {};
+    src.categories.forEach((c) => {
+      const exist = p.categories.find((x) => x.name.toLowerCase() === c.name.toLowerCase());
+      if (exist) map[c.id] = exist.id;
+      else { const nc = { id: uid(), name: c.name, color: c.color, collapsed: false }; p.categories.push(nc); map[c.id] = nc.id; }
+    });
+    src.results.forEach((r) => {
+      const cat = map[r.cat];
+      if (!cat) return;
+      if (p.results.some((x) => x.cat === cat && x.name.toLowerCase() === r.name.toLowerCase())) return;
+      p.results.push({ id: uid(), name: r.name, desc: r.desc, cat: cat, active: r.active, weight: r.weight });
+    });
+    save(); renderAll();
+  }
+
   function applyImport(raw, mode) {
     let data;
     try { data = JSON.parse(raw); }
-    catch (e) { toast('JSON invalide.'); return; }
+    catch (e) { toast(t('tInvalidJson')); return; }
 
-    const clean = sanitize({
-      categories: data.categories, results: data.results,
-      skin: state.skin, dark: state.dark, sound: state.sound
-    });
-    if (!clean || !clean.categories.length) { toast('Aucune catégorie exploitable dans ce fichier.'); return; }
+    const prof = sanitizeProfile({
+      id: uid(), name: data.name || P().name,
+      categories: data.categories, results: data.results, options: data.options
+    }, P().name);
+    if (!prof || !prof.categories.length) { toast(t('tNoCats')); return; }
 
     if (mode === 'replace') {
-      state.categories = clean.categories;
-      state.results = clean.results;
-      state.last = null;
-      state.history = [];
-      state.stats = { total: 0, counts: {} };
-    } else {
-      // Fusion : les catégories de même nom sont réutilisées, les identifiants remappés.
-      const map = {};
-      clean.categories.forEach((c) => {
-        const exist = state.categories.find((x) => x.name.toLowerCase() === c.name.toLowerCase());
-        if (exist) { map[c.id] = exist.id; }
-        else { const nc = { id: uid(), name: c.name, color: c.color, collapsed: false }; state.categories.push(nc); map[c.id] = nc.id; }
+      const p = P();
+      const backup = JSON.parse(JSON.stringify(p));
+      p.categories = prof.categories;
+      p.results = prof.results;
+      p.options = prof.options;
+      p.last = null; p.history = []; p.stats = { total: 0, counts: {} };
+      save(); closeModal(); renderAll();
+      toastUndo(t('tImported'), () => {
+        const i = state.profiles.findIndex((x) => x.id === backup.id);
+        if (i >= 0) state.profiles[i] = backup;
+        save(); renderAll();
       });
-      clean.results.forEach((r) => {
-        const cat = map[r.cat];
-        if (!cat) return;
-        const dup = state.results.some((x) => x.cat === cat && x.name.toLowerCase() === r.name.toLowerCase());
-        if (!dup) state.results.push({ id: uid(), name: r.name, desc: r.desc, cat: cat, active: r.active });
+    } else {
+      const backup = JSON.parse(JSON.stringify(P()));
+      mergeInto(prof);
+      closeModal();
+      toastUndo(t('tMerged'), () => {
+        const i = state.profiles.findIndex((x) => x.id === backup.id);
+        if (i >= 0) state.profiles[i] = backup;
+        save(); renderAll();
       });
     }
-
-    save(); closeModal(); renderGestion(); renderWheel(); renderResult(false); renderHistory();
-    toast(mode === 'replace' ? 'Configuration remplacée.' : 'Configuration fusionnée.');
   }
 
   $('#btnImport').addEventListener('click', () => {
     openModal({
-      title: 'Importer une configuration',
-      body: '<p>Choisissez un fichier JSON exporté depuis cette application, ou collez son contenu ci-dessous.</p>'
-          + '<button class="btn" id="pickFile" type="button">Choisir un fichier…</button>'
+      title: t('importTitle'),
+      body: '<p>' + esc(t('importBody')) + '</p>'
+          + '<button class="btn" id="pickFile" type="button">' + esc(t('pickFile')) + '</button>'
           + '<textarea class="input" id="impArea" placeholder="{ &quot;categories&quot;: [...], &quot;results&quot;: [...] }" style="min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>',
       buttons: [
-        { label: 'Annuler', cls: 'ghost', onClick: closeModal },
-        { label: 'Fusionner', onClick: () => applyImport($('#impArea').value, 'merge') },
-        { label: 'Remplacer', cls: 'primary', onClick: () => applyImport($('#impArea').value, 'replace') }
+        { label: t('cancel'), cls: 'ghost', onClick: closeModal },
+        { label: t('merge'), onClick: () => applyImport($('#impArea').value, 'merge') },
+        { label: t('replace'), cls: 'primary', onClick: () => applyImport($('#impArea').value, 'replace') }
       ],
-      onOpen: () => {
-        $('#pickFile').addEventListener('click', () => $('#fileInput').click());
-      }
+      onOpen: () => { $('#pickFile').addEventListener('click', () => $('#fileInput').click()); }
     });
   });
 
@@ -1754,27 +2617,30 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const fr = new FileReader();
-    fr.onload = () => { const ta = $('#impArea'); if (ta) { ta.value = String(fr.result); toast('Fichier chargé : choisissez Fusionner ou Remplacer.'); } };
-    fr.onerror = () => toast('Lecture du fichier impossible.');
+    fr.onload = () => { const ta = $('#impArea'); if (ta) { ta.value = String(fr.result); toast(t('tFileLoaded')); } };
+    fr.onerror = () => toast(t('tFileError'));
     fr.readAsText(file);
     e.target.value = '';
   });
 
-  /* --- Réinitialisation --- */
   $('#btnReset').addEventListener('click', async () => {
-    const ok = await confirmDialog('Tout réinitialiser ?',
-      'Catégories, résultats, historique et statistiques reviendront aux valeurs par défaut. Le style choisi est conservé.');
-    if (!ok) return;
-    const skin = state.skin, dark = state.dark, sound = state.sound;
-    state = defaultState();
-    state.skin = skin; state.dark = dark; state.sound = sound;
-    save(); renderGestion(); renderWheel(); renderResult(false); renderHistory();
-    toast('Application réinitialisée.');
+    if (!(await confirmDialog(t('resetTitle'), t('resetBody')))) return;
+    const p = P();
+    const backup = JSON.parse(JSON.stringify(p));
+    const seed = seedProfile(lang);
+    p.categories = seed.categories; p.results = seed.results;
+    p.options = seed.options; p.last = null; p.history = []; p.stats = { total: 0, counts: {} };
+    search = ''; $('#search').value = ''; $('#searchClear').hidden = true;
+    save(); renderAll();
+    toastUndo(t('tReset'), () => {
+      const i = state.profiles.findIndex((x) => x.id === backup.id);
+      if (i >= 0) state.profiles[i] = backup;
+      save(); renderAll();
+    });
   });
 
-  /* == G. Effets & démarrage ============================================== */
+  /* == I. Effets ========================================================== */
 
-  /* --- Sons discrets (Web Audio, aucun fichier externe) --- */
   let actx = null;
   function audioCtx() {
     if (!state.sound) return null;
@@ -1805,7 +2671,6 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     [0, 90, 180].forEach((d, i) => setTimeout(() => blip([523.25, 659.25, 783.99][i], 0.22, 0.07, 'triangle'), d));
   }
 
-  /* --- Confettis (canvas, ~1,6 s puis arrêt complet) --- */
   const cvs = $('#confetti');
   const ctx = cvs.getContext ? cvs.getContext('2d') : null;
   let confettiRaf = null;
@@ -1827,27 +2692,24 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
       parts.push({
         x: w / 2 + (Math.random() - 0.5) * w * 0.35,
         y: h * 0.42 + (Math.random() - 0.5) * 40,
-        vx: (Math.random() - 0.5) * 9,
-        vy: -6 - Math.random() * 8,
-        s: 4 + Math.random() * 5,
-        rot: Math.random() * Math.PI,
-        vr: (Math.random() - 0.5) * 0.3,
-        c: tints[i % tints.length]
+        vx: (Math.random() - 0.5) * 9, vy: -6 - Math.random() * 8,
+        s: 4 + Math.random() * 5, rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.3, c: tints[i % tints.length]
       });
     }
 
     const t0 = performance.now();
     function frame(now) {
-      const t = (now - t0) / 1600;
+      const p = (now - t0) / 1600;
       ctx.clearRect(0, 0, w, h);
-      if (t >= 1) { cvs.hidden = true; return; }
-      ctx.globalAlpha = t > 0.75 ? (1 - t) / 0.25 : 1;
-      for (const p of parts) {
-        p.vy += 0.34; p.x += p.vx; p.y += p.vy; p.vx *= 0.995; p.rot += p.vr;
+      if (p >= 1) { cvs.hidden = true; return; }
+      ctx.globalAlpha = p > 0.75 ? (1 - p) / 0.25 : 1;
+      for (const q of parts) {
+        q.vy += 0.34; q.x += q.vx; q.y += q.vy; q.vx *= 0.995; q.rot += q.vr;
         ctx.save();
-        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-        ctx.fillStyle = p.c;
-        ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+        ctx.translate(q.x, q.y); ctx.rotate(q.rot);
+        ctx.fillStyle = q.c;
+        ctx.fillRect(-q.s / 2, -q.s / 4, q.s, q.s / 2);
         ctx.restore();
       }
       confettiRaf = requestAnimationFrame(frame);
@@ -1855,16 +2717,35 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
     confettiRaf = requestAnimationFrame(frame);
   }
 
-  /* --- Démarrage --- */
-  save();          // fige l'état initial (identifiants stables des données d'exemple)
+  /* == J. Démarrage ======================================================= */
+
+  /** Redessine tout ce qui dépend de la roue active ou de la langue. */
+  function renderAll() {
+    renderProfiles();
+    renderWheel();
+    renderResult(false);
+    renderHistory();
+    renderGestion();
+  }
+
+  $('#dismissWarn').addEventListener('click', () => { $('#storageWarn').hidden = true; });
+
+  applyLang();
   applyTheme();
-  renderWheel();
-  renderResult(false);
-  renderHistory();
-  renderGestion();
+  if (!storageOK) $('#storageWarn').hidden = false;
+  save();                       // fige l'état initial (identifiants stables)
+  renderAll();
   selectTab('roue');
 
-  // La roue s'adapte aux changements d'orientation / de taille sans recalcul lourd.
+  // Roue reçue par lien : on la propose sans rien écraser.
+  if (location.hash.indexOf('#r=') === 0) {
+    try {
+      const prof = profileFromShare(JSON.parse(b64decode(location.hash.slice(3))));
+      history.replaceState(null, '', location.href.split('#')[0]);
+      if (prof && prof.results.length) setTimeout(() => offerShared(prof), 120);
+    } catch (e) { /* lien illisible : on l'ignore silencieusement */ }
+  }
+
   window.addEventListener('orientationchange', () => setTimeout(renderWheel, 250));
 })();
 </script>
