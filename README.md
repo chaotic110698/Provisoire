@@ -29,10 +29,12 @@ une clé USB, un partage réseau…
 - Import / export JSON (fichier ou copier-coller), réinitialisation complète.
 
 **Présentation**
-- 3 styles : **Casino** (rouge/noir/or, effet 3D), **Feutré** (bordeaux, serif, texture),
-  **Blanc classique** (minimaliste, contrasté).
-- Mode nuit décliné pour chacun des trois styles ; par défaut il suit la préférence
-  système du navigateur.
+- 4 styles : **Casino** (rouge/noir/or, effet 3D), **Feutré** (bordeaux, serif, texture),
+  **Blanc classique** (minimaliste, contrasté) et **Velours** (noir profond, rouge velours
+  et laiton, grain de tissu et lustre, display Didot).
+- Mode nuit décliné pour chacun des quatre styles ; par défaut il suit la préférence
+  système du navigateur. Velours assume son monde sombre dans les deux modes : le mode
+  nuit y baisse les lumières au lieu d'inverser la palette.
 - Barre latérale permanente sur écran large, tiroir escamotable sous 640 px.
 
 ## Données

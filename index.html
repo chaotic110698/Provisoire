@@ -163,6 +163,45 @@ svg { display: block }
   --gloss: .18;
 }
 
+/* --- Velours : noir profond, rouge velours, laiton ; grain de tissu et lustre --- */
+[data-skin="velours"] {
+  --font: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-head: Didot, "Bodoni MT", "Playfair Display", "Palatino Linotype", Georgia, serif;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --bg: #1e0a0f;
+  /* Deux nappes de lumière rasante + le grain serré du velours. */
+  --bg-pattern:
+    radial-gradient(ellipse 120% 78% at 50% -12%, rgba(214, 45, 80, .22), transparent 62%),
+    radial-gradient(ellipse 95% 62% at 84% 112%, rgba(122, 10, 32, .30), transparent 66%),
+    repeating-linear-gradient(103deg, rgba(255, 226, 214, .022) 0 2px, rgba(0, 0, 0, .030) 2px 5px);
+  --panel: #2b1119;
+  --panel-2: #361621;
+  --panel-3: #431d2a;
+  --fg: #f7e6e8;
+  --muted: #c39aa2;
+  --border: #4a2029;
+  --border-strong: #6b343f;
+  --accent: #c2183c;
+  --accent-fg: #fff0f2;
+  --accent-2: #d3a161;
+  --danger: #ff6b74;
+  --good: #6fbf95;
+  --focus: #d3a161;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .55), 0 8px 22px rgba(70, 4, 18, .40);
+  --shadow-2: 0 18px 44px rgba(0, 0, 0, .62);
+  --sidebar-bg: #12050a;
+  --sidebar-fg: #f0d9dd;
+  --rim-outer: #d3a161;
+  --rim-inner: #12050a;
+  --hub-bg: #12050a;
+  --hub-fg: #d3a161;
+  --pointer: #d3a161;
+  --slice-stroke: rgba(18, 5, 10, .58);
+  --wheel-shadow: 0 16px 44px rgba(0, 0, 0, .68), 0 0 0 7px rgba(211, 161, 97, .16);
+  --gloss: .40;
+}
+
 /* --- Mode nuit : une déclinaison par thème --- */
 [data-mode="dark"],
 [data-mode="dark"][data-skin="blanc"] {
@@ -224,6 +263,39 @@ svg { display: block }
   --pointer: #f2b705;
   --slice-stroke: rgba(18, 10, 8, .5);
   --wheel-shadow: 0 12px 32px rgba(0, 0, 0, .68), 0 0 0 6px rgba(242, 183, 5, .18);
+  --gloss: .34;
+}
+
+[data-mode="dark"][data-skin="velours"] {
+  --bg: #0a0305;
+  --bg-pattern:
+    radial-gradient(ellipse 120% 78% at 50% -12%, rgba(170, 26, 56, .20), transparent 60%),
+    radial-gradient(ellipse 95% 62% at 84% 112%, rgba(88, 6, 24, .34), transparent 64%),
+    repeating-linear-gradient(103deg, rgba(255, 226, 214, .016) 0 2px, rgba(0, 0, 0, .045) 2px 5px);
+  --panel: #150609;
+  --panel-2: #1e0a0e;
+  --panel-3: #2a1017;
+  --fg: #ecd8db;
+  --muted: #b08b93;
+  --border: #33141a;
+  --border-strong: #4d2029;
+  --accent: #a5122c;
+  --accent-fg: #ffe9ec;
+  --accent-2: #b98a4e;
+  --danger: #e8595f;
+  --good: #59a87f;
+  --focus: #b98a4e;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .7), 0 8px 22px rgba(0, 0, 0, .5);
+  --shadow-2: 0 18px 44px rgba(0, 0, 0, .78);
+  --sidebar-bg: #060102;
+  --sidebar-fg: #e3c9ce;
+  --rim-outer: #b98a4e;
+  --rim-inner: #060102;
+  --hub-bg: #060102;
+  --hub-fg: #b98a4e;
+  --pointer: #b98a4e;
+  --slice-stroke: rgba(6, 1, 2, .62);
+  --wheel-shadow: 0 16px 44px rgba(0, 0, 0, .8), 0 0 0 7px rgba(185, 138, 78, .13);
   --gloss: .34;
 }
 
@@ -303,7 +375,7 @@ svg { display: block }
 .tab .ico { font-size: 18px }
 
 /* Sélecteur de thème */
-.skins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
+.skins { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px }
 .skin {
   min-height: 46px; padding: 6px 2px; border-radius: var(--radius-sm);
   border: 1px solid rgba(128, 128, 128, .35);
@@ -316,6 +388,7 @@ svg { display: block }
 .skin[data-s="casino"] .swatch { background: linear-gradient(90deg, #c8102e 0 34%, #12100c 34% 67%, #f2b705 67%) }
 .skin[data-s="feutre"] .swatch { background: linear-gradient(90deg, #7b1e2b 0 34%, #b8543f 34% 67%, #f6ece1 67%) }
 .skin[data-s="blanc"] .swatch { background: linear-gradient(90deg, #ffffff 0 34%, #c3cad6 34% 67%, #1f2937 67%) }
+.skin[data-s="velours"] .swatch { background: linear-gradient(90deg, #0d0406 0 34%, #b3122f 34% 67%, #d3a161 67%) }
 
 /* Interrupteurs */
 .switch {
@@ -602,6 +675,7 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
         <button class="skin" data-s="casino" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Casino</button>
         <button class="skin" data-s="feutre" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Feutré</button>
         <button class="skin" data-s="blanc" aria-pressed="true"><span class="swatch" aria-hidden="true"></span>Blanc</button>
+        <button class="skin" data-s="velours" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Velours</button>
       </div>
     </div>
 
@@ -816,6 +890,7 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
   const STORAGE_KEY = 'roue-fortune-v1';
   const MAX_HISTORY = 10;
+  const SKINS = ['casino', 'feutre', 'blanc', 'velours'];
 
   /** Jeu de données proposé à la première visite. */
   function defaultState() {
@@ -871,7 +946,7 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 
     return {
       version: 1,
-      skin: ['casino', 'feutre', 'blanc'].indexOf(raw.skin) >= 0 ? raw.skin : 'blanc',
+      skin: SKINS.indexOf(raw.skin) >= 0 ? raw.skin : 'blanc',
       dark: typeof raw.dark === 'boolean' ? raw.dark : window.matchMedia('(prefers-color-scheme: dark)').matches,
       sound: raw.sound !== false,
       categories: categories,
