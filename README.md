@@ -42,6 +42,16 @@ une clé USB, un partage réseau…
   chacune avec ses catégories, résultats, réglages, historique et statistiques.
 - Création, renommage, duplication et suppression depuis la barre latérale.
 
+**Packs thématiques**
+- L'export laisse choisir les catégories à emporter. Toutes cochées, c'est la roue
+  complète (réglages compris) ; une sélection partielle produit un **pack** : un jeu de
+  catégories réutilisable, à fusionner dans n'importe quelle roue.
+- Chaque catégorie porte un bouton « pack » qui l'exporte seule, en un clic.
+- À l'import, l'application annonce ce qu'elle a reconnu (« Pack « Films du soir » :
+  1 catégorie, 12 résultats ») avant que vous ne choisissiez. Fusionner est l'action
+  par défaut : les catégories de même nom sont réutilisées, les doublons ignorés, et
+  les réglages de la roue d'accueil sont conservés — un pack n'en transporte pas.
+
 **Partage**
 - Le bouton « Partager » encode la roue entière dans le fragment de l'URL. Envoyez le lien :
   la personne qui l'ouvre se voit proposer d'ouvrir la roue ou de la fusionner avec la sienne.
@@ -77,12 +87,17 @@ Format d'échange (bouton « Exporter ») :
 {
   "app": "roue-de-fortune",
   "version": 2,
+  "kind": "wheel",
   "name": "Ma roue",
   "options": { "removeOnDraw": false, "avoidRepeat": false },
   "categories": [{ "id": "c1", "name": "Boissons", "color": "#d64545" }],
   "results": [{ "id": "r1", "name": "Café", "desc": "…", "cat": "c1", "active": true, "weight": 1 }]
 }
 ```
+
+Un pack a exactement le même format, avec `"kind": "pack"`, un sous-ensemble de
+catégories et pas de clé `options`. Les deux se rechargent par le même bouton
+« Importer ».
 
 À l'import, « Remplacer » écrase la roue active, « Fusionner » ajoute ce qui manque
 (les catégories de même nom sont réutilisées, les doublons ignorés). Les deux sont annulables.

@@ -553,7 +553,7 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
   padding: 7px 8px; font-size: 15px;
 }
 .cat-head .cat-name:hover { border-color: var(--border-strong); background: var(--panel) }
-.cat-head input[type="color"] { width: 44px; height: 40px; padding: 2px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--panel); cursor: pointer }
+.cat-head input[type="color"] { flex: 0 0 auto; width: 44px; height: 40px; padding: 2px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--panel); cursor: pointer }
 .chev { transition: transform .18s ease; font-size: 13px }
 .cat.collapsed .chev { transform: rotate(-90deg) }
 .cat.collapsed .cat-body { display: none }
@@ -683,6 +683,20 @@ input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
 .opt span { font-size: 12.5px; color: var(--muted); line-height: 1.45 }
 
 /* Recherche */
+/* Sélection des catégories à exporter (packs thématiques) */
+.pack-head { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--muted) }
+.pack-head .spacer { flex: 1 1 auto }
+.pack-list {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 200px; overflow-y: auto; padding: 6px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-2);
+}
+.pack-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 7px; cursor: pointer; font-size: 14px }
+.pack-item:hover { background: var(--panel-3) }
+.pack-item input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--accent-2); cursor: pointer }
+.pack-item .nm { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600 }
+.pack-hint { font-size: 12.5px; color: var(--muted); line-height: 1.5 }
+
 .field-pair { display: flex; gap: 10px; min-width: 0 }
 .field-pair .field { flex: 1 1 0 }
 
@@ -749,6 +763,8 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
 @media (max-width: 640px) {
   .res-main { flex: 1 1 100% ; order: -1 }
   .res { row-gap: 2px; padding-bottom: 8px }
+  .cat-head { flex-wrap: wrap; row-gap: 6px }
+  .cat-head .cat-name { flex: 1 1 100%; order: -1 }
   .legend ol { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) }
 }
 
@@ -1151,6 +1167,16 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
       sharedBody: '« {0} » contient {1} résultat(s) dans {2} catégorie(s). Que faire ?',
       openShared: 'Ouvrir comme nouvelle roue', mergeShared: 'Fusionner dans la roue actuelle',
       histTitle: 'Exporter l’historique', histBody: 'Historique au format CSV, séparateur point-virgule.',
+      exportScope: 'Catégories à exporter',
+      exportHintAll: 'Toutes les catégories : export complet de la roue, réglages compris.',
+      exportHintSome: 'Sélection partielle : pack thématique, à fusionner dans n’importe quelle roue.',
+      selectAll: 'Tout', selectNone: 'Aucune',
+      exportPack: 'Exporter « {0} » en pack',
+      packName: 'pack',
+      impDetectedPack: 'Pack « {0} » : {1} catégorie(s), {2} résultat(s).',
+      impDetectedWheel: 'Roue « {0} » : {1} catégorie(s), {2} résultat(s).',
+      impDetectedNone: 'Rien de reconnaissable pour l’instant.',
+      tNoSelection: 'Sélectionnez au moins une catégorie.',
       profilesTitle: 'Gérer les roues', profileNew: 'Nouvelle roue', profileName: 'Nom de la roue',
       profileDelTitle: 'Supprimer la roue « {0} » ?',
       profileDelBody: 'Ses catégories, résultats, historique et statistiques seront supprimés. Vous pourrez annuler juste après.',
@@ -1233,6 +1259,16 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
       sharedBody: '"{0}" holds {1} outcome(s) across {2} category/ies. What now?',
       openShared: 'Open as a new wheel', mergeShared: 'Merge into the current wheel',
       histTitle: 'Export history', histBody: 'History as CSV, semicolon separated.',
+      exportScope: 'Categories to export',
+      exportHintAll: 'Every category: full wheel export, settings included.',
+      exportHintSome: 'Partial selection: a themed pack, to merge into any wheel.',
+      selectAll: 'All', selectNone: 'None',
+      exportPack: 'Export "{0}" as a pack',
+      packName: 'pack',
+      impDetectedPack: 'Pack "{0}": {1} category/ies, {2} outcome(s).',
+      impDetectedWheel: 'Wheel "{0}": {1} category/ies, {2} outcome(s).',
+      impDetectedNone: 'Nothing recognizable yet.',
+      tNoSelection: 'Select at least one category.',
       profilesTitle: 'Manage wheels', profileNew: 'New wheel', profileName: 'Wheel name',
       profileDelTitle: 'Delete wheel "{0}"?',
       profileDelBody: 'Its categories, outcomes, history and statistics will be deleted. You can undo right after.',
@@ -1981,6 +2017,10 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
     + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
     + '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path>'
     + '<path d="M10 11v6M14 11v6"></path></svg>';
+  const ICO_PACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M21 8v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8"></path>'
+    + '<path d="M2 4h20v4H2z"></path><path d="M10 12h4"></path></svg>';
 
   const fCat = $('#fCat'), fColor = $('#fColor'), fNewWrap = $('#fNewWrap'), fNewCat = $('#fNewCat');
   const catList = $('#catList');
@@ -2155,6 +2195,7 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
         + '<input class="cat-name" value="' + esc(cat.name) + '" maxlength="40" data-act="rename" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('catName')) + '">'
         + '<span class="badge">' + on + '/' + all.length + '</span>'
         + '<input type="color" value="' + esc(color) + '" data-act="recolor" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('catColor', cat.name)) + '">'
+        + '<button class="icon-btn" data-act="pack" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('exportPack', cat.name)) + '">' + ICO_PACK + '</button>'
         + '<button class="icon-btn danger" data-act="del-cat" data-id="' + esc(cat.id) + '" aria-label="' + esc(t('delCat', cat.name)) + '">' + ICO_DEL + '</button>'
         + '</header>'
         + '<div class="cat-body">' + rows + '</div></section>';
@@ -2264,6 +2305,7 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
     } else if (act === 'cat-up') { moveCategory(id, -1);
     } else if (act === 'cat-down') { moveCategory(id, 1);
     } else if (act === 'edit') { openEditModal(id);
+    } else if (act === 'pack') { exportModal([id]);
 
     } else if (act === 'del-res') {
       const r = resById(id); if (!r) return;
@@ -2437,6 +2479,21 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
 
   /* == H. Import / export / partage ======================================= */
 
+  /** Déclenche l'enregistrement d'un texte en fichier. */
+  function downloadText(text, filename, mime) {
+    try {
+      const blob = new Blob([text], { type: mime || 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) { toast(t('tDownloadFail')); }
+  }
+
+  /** Nom de fichier lisible, sans accent ni espace. */
+  const slug = (x) => fold(x).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'roue';
+
   /** Modale « texte + copier + télécharger », partagée par les exports. */
   function textModal(title, intro, text, filename, mime) {
     openModal({
@@ -2446,16 +2503,7 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
       buttons: [
         { label: t('close'), cls: 'ghost', onClick: closeModal },
         { label: t('copy'), onClick: () => copyFrom($('#expArea')) },
-        { label: t('download'), cls: 'primary', onClick: () => {
-            try {
-              const blob = new Blob([text], { type: mime || 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url; a.download = filename;
-              document.body.appendChild(a); a.click(); a.remove();
-              setTimeout(() => URL.revokeObjectURL(url), 1000);
-            } catch (err) { toast(t('tDownloadFail')); }
-          } }
+        { label: t('download'), cls: 'primary', onClick: () => downloadText(text, filename, mime) }
       ]
     });
   }
@@ -2468,18 +2516,91 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
     else fallback();
   }
 
-  function exportPayload() {
+  /**
+   * Modale d'export avec choix des catégories.
+   * Toutes cochées : export complet de la roue, réglages compris.
+   * Sélection partielle : « pack » thématique, destiné à être fusionné ailleurs.
+   */
+  function exportModal(preselect) {
     const p = P();
-    return JSON.stringify({
-      app: 'roue-de-fortune', version: 2, exportedAt: new Date().toISOString(),
-      name: p.name, options: p.options, categories: p.categories, results: p.results
-    }, null, 2);
+    if (!p.categories.length) { toast(t('tNoCats')); return; }
+    const chosen = new Set((preselect && preselect.length ? preselect : p.categories.map((c) => c.id))
+      .filter((id) => p.categories.some((c) => c.id === id)));
+    if (!chosen.size) p.categories.forEach((c) => chosen.add(c.id));
+
+    function payload() {
+      const cats = p.categories.filter((c) => chosen.has(c.id));
+      const whole = cats.length === p.categories.length;
+      const out = {
+        app: 'roue-de-fortune', version: 2,
+        kind: whole ? 'wheel' : 'pack',
+        name: whole ? p.name : (cats.length === 1 ? cats[0].name : t('packName')),
+        exportedAt: new Date().toISOString()
+      };
+      if (whole) out.options = p.options;
+      out.categories = cats;
+      out.results = p.results.filter((r) => chosen.has(r.cat));
+      return out;
+    }
+
+    const filename = () => {
+      const d = payload();
+      return (d.kind === 'pack' ? 'pack-' : 'roue-') + slug(d.name) + '-' + new Date().toISOString().slice(0, 10) + '.json';
+    };
+
+    function refresh() {
+      const d = payload();
+      $('#expArea').value = JSON.stringify(d, null, 2);
+      $('#expHint').textContent = d.kind === 'wheel' ? t('exportHintAll') : t('exportHintSome');
+      $('#expCount').textContent = d.categories.length + ' / ' + p.categories.length;
+    }
+
+    const rows = p.categories.map((c) => {
+      const n = p.results.filter((r) => r.cat === c.id).length;
+      return '<label class="pack-item"><input type="checkbox" data-c="' + esc(c.id) + '"' + (chosen.has(c.id) ? ' checked' : '') + '>'
+        + '<span class="dot" style="background:' + esc(normalizeHex(c.color)) + '"></span>'
+        + '<span class="nm">' + esc(c.name) + '</span><span class="badge">' + n + '</span></label>';
+    }).join('');
+
+    openModal({
+      title: t('exportTitle'),
+      body: '<p>' + esc(t('exportBody')) + '</p>'
+          + '<div class="pack-head"><span>' + esc(t('exportScope')) + '</span><span class="spacer"></span>'
+          + '<span id="expCount"></span>'
+          + '<button class="btn sm ghost" type="button" id="expAll">' + esc(t('selectAll')) + '</button>'
+          + '<button class="btn sm ghost" type="button" id="expNone">' + esc(t('selectNone')) + '</button></div>'
+          + '<div class="pack-list" id="expCats">' + rows + '</div>'
+          + '<p class="pack-hint" id="expHint"></p>'
+          + '<textarea class="input" id="expArea" readonly style="min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>',
+      buttons: [
+        { label: t('close'), cls: 'ghost', onClick: closeModal },
+        { label: t('copy'), onClick: () => copyFrom($('#expArea')) },
+        { label: t('download'), cls: 'primary', onClick: () => downloadText($('#expArea').value, filename(), 'application/json') }
+      ],
+      onOpen: () => {
+        $('#expCats').addEventListener('change', (e) => {
+          const cb = e.target.closest('input[data-c]');
+          if (!cb) return;
+          if (cb.checked) chosen.add(cb.dataset.c); else chosen.delete(cb.dataset.c);
+          if (!chosen.size) { cb.checked = true; chosen.add(cb.dataset.c); toast(t('tNoSelection')); }
+          refresh();
+        });
+        const setAll = (on) => {
+          chosen.clear();
+          $$('#expCats input[data-c]').forEach((cb, i) => {
+            cb.checked = on || i === 0;              // au moins une catégorie reste cochée
+            if (cb.checked) chosen.add(cb.dataset.c);
+          });
+          refresh();
+        };
+        $('#expAll').addEventListener('click', () => setAll(true));
+        $('#expNone').addEventListener('click', () => setAll(false));
+        refresh();
+      }
+    });
   }
 
-  $('#btnExport').addEventListener('click', () => {
-    textModal(t('exportTitle'), t('exportBody'), exportPayload(),
-      'roue-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
-  });
+  $('#btnExport').addEventListener('click', () => exportModal(null));
 
   /* --- Partage par lien : toute la roue tient dans le fragment d'URL --- */
 
@@ -2562,23 +2683,35 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
     save(); renderAll();
   }
 
-  function applyImport(raw, mode) {
+  /** Décrit ce que contient un JSON collé ou chargé, sans rien modifier. */
+  function describePayload(raw) {
     let data;
-    try { data = JSON.parse(raw); }
-    catch (e) { toast(t('tInvalidJson')); return; }
+    try { data = JSON.parse(raw); } catch (e) { return null; }
+    if (!data || typeof data !== 'object') return null;
+    const prof = sanitizeProfile({ id: uid(), name: data.name || '—', categories: data.categories, results: data.results }, '—');
+    if (!prof || !prof.categories.length) return null;
+    return { kind: data.kind === 'pack' ? 'pack' : 'wheel', prof: prof, options: data.options };
+  }
 
-    const prof = sanitizeProfile({
-      id: uid(), name: data.name || P().name,
-      categories: data.categories, results: data.results, options: data.options
-    }, P().name);
-    if (!prof || !prof.categories.length) { toast(t('tNoCats')); return; }
+  function applyImport(raw, mode) {
+    const info = describePayload(raw);
+    if (!info) {
+      let bad = false;
+      try { JSON.parse(raw); } catch (e) { bad = true; }
+      toast(bad ? t('tInvalidJson') : t('tNoCats'));
+      return;
+    }
+    const prof = info.prof;
 
     if (mode === 'replace') {
       const p = P();
       const backup = JSON.parse(JSON.stringify(p));
       p.categories = prof.categories;
       p.results = prof.results;
-      p.options = prof.options;
+      // Un pack ne transporte pas de réglages : ceux de la roue sont conservés.
+      if (info.options && typeof info.options === 'object') {
+        p.options = { removeOnDraw: !!info.options.removeOnDraw, avoidRepeat: !!info.options.avoidRepeat };
+      }
       p.last = null; p.history = []; p.stats = { total: 0, counts: {} };
       save(); closeModal(); renderAll();
       toastUndo(t('tImported'), () => {
@@ -2603,21 +2736,39 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
       title: t('importTitle'),
       body: '<p>' + esc(t('importBody')) + '</p>'
           + '<button class="btn" id="pickFile" type="button">' + esc(t('pickFile')) + '</button>'
-          + '<textarea class="input" id="impArea" placeholder="{ &quot;categories&quot;: [...], &quot;results&quot;: [...] }" style="min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>',
+          + '<textarea class="input" id="impArea" placeholder="{ &quot;categories&quot;: [...], &quot;results&quot;: [...] }" style="min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>'
+          + '<p class="pack-hint" id="impInfo"></p>',
       buttons: [
         { label: t('cancel'), cls: 'ghost', onClick: closeModal },
-        { label: t('merge'), onClick: () => applyImport($('#impArea').value, 'merge') },
-        { label: t('replace'), cls: 'primary', onClick: () => applyImport($('#impArea').value, 'replace') }
+        { label: t('replace'), onClick: () => applyImport($('#impArea').value, 'replace') },
+        { label: t('merge'), cls: 'primary', onClick: () => applyImport($('#impArea').value, 'merge') }
       ],
-      onOpen: () => { $('#pickFile').addEventListener('click', () => $('#fileInput').click()); }
+      onOpen: () => {
+        $('#pickFile').addEventListener('click', () => $('#fileInput').click());
+        $('#impArea').addEventListener('input', describeInto);
+        describeInto();
+      }
     });
   });
+
+  /** Met à jour la ligne de résumé de la modale d'import. */
+  function describeInto() {
+    const el = $('#impInfo');
+    if (!el) return;
+    const raw = $('#impArea').value.trim();
+    if (!raw) { el.textContent = ''; return; }
+    const info = describePayload(raw);
+    el.textContent = info
+      ? t(info.kind === 'pack' ? 'impDetectedPack' : 'impDetectedWheel',
+          info.prof.name, info.prof.categories.length, info.prof.results.length)
+      : t('impDetectedNone');
+  }
 
   $('#fileInput').addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const fr = new FileReader();
-    fr.onload = () => { const ta = $('#impArea'); if (ta) { ta.value = String(fr.result); toast(t('tFileLoaded')); } };
+    fr.onload = () => { const ta = $('#impArea'); if (ta) { ta.value = String(fr.result); describeInto(); toast(t('tFileLoaded')); } };
     fr.onerror = () => toast(t('tFileError'));
     fr.readAsText(file);
     e.target.value = '';
