@@ -2741,7 +2741,8 @@ body.presenting .result-desc { font-size: clamp(14px, 1.6vw, 19px) }
   if (location.hash.indexOf('#r=') === 0) {
     try {
       const prof = profileFromShare(JSON.parse(b64decode(location.hash.slice(3))));
-      history.replaceState(null, '', location.href.split('#')[0]);
+      try { history.replaceState(null, '', location.href.split('#')[0]); }
+      catch (e) { location.hash = ''; }
       if (prof && prof.results.length) setTimeout(() => offerShared(prof), 120);
     } catch (e) { /* lien illisible : on l'ignore silencieusement */ }
   }
