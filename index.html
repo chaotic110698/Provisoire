@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="fr" data-skin="blanc">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Roue de fortune interactive : créez vos résultats, organisez-les par catégories colorées, lancez la roue. 100% hors-ligne, un seul fichier.">
+<title>Roue de Fortune</title>
+
+<!-- Applique le thème AVANT le premier rendu pour éviter tout clignotement. -->
+<script>
+(function () {
+  try {
+    var s = JSON.parse(localStorage.getItem('roue-fortune-v1') || '{}');
+    var r = document.documentElement;
+    r.setAttribute('data-skin', s.skin || 'blanc');
+    var dark = (typeof s.dark === 'boolean')
+      ? s.dark
+      : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (dark) r.setAttribute('data-mode', 'dark');
+  } catch (e) { /* localStorage indisponible : on garde les valeurs par défaut */ }
+})();
+</script>
+
+<style>
+/* ==========================================================================
+   ROUE DE FORTUNE - feuille de style unique
+   1. Reset & jetons (tokens)      5. Onglet « Gestion »
+   2. Thèmes + mode nuit           6. Modale / toast / confettis
+   3. Structure (sidebar + main)   7. Responsive
+   4. Onglet « Roue »
+   ========================================================================== */
+
+/* 1 ------------------------- Reset & jetons ------------------------- */
+*, *::before, *::after { box-sizing: border-box }
+html { -webkit-text-size-adjust: 100% }
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font);
+  color: var(--fg);
+  background-color: var(--bg);
+  background-image: var(--bg-pattern, none);
+  background-attachment: fixed;
+  overflow-x: hidden;
+  transition: background-color .25s ease, color .25s ease;
+}
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0 }
+ul, ol { padding: 0; list-style: none }
+button, input, select, textarea { font: inherit; color: inherit }
+button { background: none; border: none; cursor: pointer }
+svg { display: block }
+[hidden] { display: none !important }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px }
+
+/* Thème « Blanc classique » = valeurs par défaut */
+:root {
+  --sidebar-w: 238px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --font: "Segoe UI", Helvetica, -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+  --font-head: var(--font);
+  --bg: #f5f6f8;
+  --bg-pattern: none;
+  --panel: #ffffff;
+  --panel-2: #f2f4f7;
+  --panel-3: #e9ecf1;
+  --fg: #14171c;
+  --muted: #5d6572;
+  --border: #dfe3ea;
+  --border-strong: #c3cad6;
+  --accent: #1f2937;
+  --accent-fg: #ffffff;
+  --accent-2: #4f74ff;
+  --danger: #c0392b;
+  --good: #1e8e5a;
+  --focus: #4f74ff;
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 14px rgba(16, 24, 40, .06);
+  --shadow-2: 0 12px 32px rgba(16, 24, 40, .16);
+  --sidebar-bg: #ffffff;
+  --sidebar-fg: var(--fg);
+  --rim-outer: #d9dee7;
+  --rim-inner: #ffffff;
+  --hub-bg: #ffffff;
+  --hub-fg: #14171c;
+  --pointer: #1f2937;
+  --slice-stroke: rgba(255, 255, 255, .85);
+  --wheel-shadow: 0 8px 26px rgba(16, 24, 40, .18);
+  --gloss: .12;
+}
+
+/* 2 ------------------------- Thèmes ------------------------- */
+
+/* --- Casino : rouge vif, noir, or ; ombres marquées, effet 3D --- */
+[data-skin="casino"] {
+  --font: Arial, Helvetica, "Segoe UI", sans-serif;
+  --font-head: "Arial Black", Arial, Helvetica, sans-serif;
+  --bg: #fdf3dc;
+  --bg-pattern:
+    radial-gradient(circle at 12% 8%, rgba(212, 160, 23, .20), transparent 42%),
+    radial-gradient(circle at 88% 94%, rgba(200, 16, 46, .16), transparent 46%);
+  --panel: #fffaf0;
+  --panel-2: #f7e9ca;
+  --panel-3: #efdcb0;
+  --fg: #1b1206;
+  --muted: #6b5629;
+  --border: #e2c887;
+  --border-strong: #c8a24a;
+  --accent: #c8102e;
+  --accent-fg: #fff8e1;
+  --accent-2: #f2b705;
+  --danger: #a4161a;
+  --good: #1e7d4f;
+  --focus: #d99a00;
+  --shadow-1: 0 2px 0 rgba(155, 116, 20, .28), 0 6px 18px rgba(90, 60, 10, .18);
+  --shadow-2: 0 16px 36px rgba(90, 60, 10, .32);
+  --sidebar-bg: #1b1206;
+  --sidebar-fg: #ffe9b0;
+  --rim-outer: #f2b705;
+  --rim-inner: #c8102e;
+  --hub-bg: #c8102e;
+  --hub-fg: #ffe9b0;
+  --pointer: #f2b705;
+  --slice-stroke: rgba(255, 244, 214, .9);
+  --wheel-shadow: 0 12px 32px rgba(120, 20, 30, .38), 0 0 0 6px rgba(242, 183, 5, .25);
+  --gloss: .42;
+}
+
+/* --- Feutré rouge : bordeaux, crème, serif, texture douce --- */
+[data-skin="feutre"] {
+  --font: Georgia, "Times New Roman", Times, serif;
+  --font-head: Georgia, "Times New Roman", Times, serif;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --bg: #f6ece1;
+  --bg-pattern:
+    repeating-linear-gradient(45deg, rgba(123, 30, 43, .045) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(123, 30, 43, .035) 0 2px, transparent 2px 7px);
+  --panel: #fffaf5;
+  --panel-2: #f3e3d6;
+  --panel-3: #ecd6c6;
+  --fg: #2e1a17;
+  --muted: #7a5b53;
+  --border: #e3cdbe;
+  --border-strong: #c9ab99;
+  --accent: #8c2230;
+  --accent-fg: #fff6ee;
+  --accent-2: #b8543f;
+  --danger: #96201f;
+  --good: #4a7c59;
+  --focus: #b8543f;
+  --shadow-1: 0 1px 2px rgba(90, 40, 30, .08), 0 6px 16px rgba(90, 40, 30, .10);
+  --shadow-2: 0 14px 30px rgba(90, 40, 30, .20);
+  --sidebar-bg: #7b1e2b;
+  --sidebar-fg: #fbeee4;
+  --rim-outer: #7b1e2b;
+  --rim-inner: #f6ece1;
+  --hub-bg: #fffaf5;
+  --hub-fg: #7b1e2b;
+  --pointer: #7b1e2b;
+  --slice-stroke: rgba(255, 246, 238, .7);
+  --wheel-shadow: 0 10px 26px rgba(90, 30, 35, .28);
+  --gloss: .18;
+}
+
+/* --- Mode nuit : une déclinaison par thème --- */
+[data-mode="dark"],
+[data-mode="dark"][data-skin="blanc"] {
+  --bg: #101215;
+  --bg-pattern: none;
+  --panel: #181b20;
+  --panel-2: #1f232a;
+  --panel-3: #262b33;
+  --fg: #e9edf3;
+  --muted: #9aa4b2;
+  --border: #2b313a;
+  --border-strong: #3a424e;
+  --accent: #e9edf3;
+  --accent-fg: #101215;
+  --accent-2: #7aa2ff;
+  --danger: #ef6b5e;
+  --good: #46c08b;
+  --focus: #7aa2ff;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --shadow-2: 0 14px 34px rgba(0, 0, 0, .6);
+  --sidebar-bg: #14171c;
+  --sidebar-fg: #e9edf3;
+  --rim-outer: #2b313a;
+  --rim-inner: #181b20;
+  --hub-bg: #1f232a;
+  --hub-fg: #e9edf3;
+  --pointer: #e9edf3;
+  --slice-stroke: rgba(8, 10, 13, .55);
+  --wheel-shadow: 0 10px 30px rgba(0, 0, 0, .6);
+  --gloss: .16;
+}
+
+[data-mode="dark"][data-skin="casino"] {
+  --bg: #120a08;
+  --bg-pattern:
+    radial-gradient(circle at 15% 10%, rgba(242, 183, 5, .12), transparent 45%),
+    radial-gradient(circle at 85% 92%, rgba(200, 16, 46, .16), transparent 48%);
+  --panel: #1d1210;
+  --panel-2: #271815;
+  --panel-3: #33201c;
+  --fg: #ffeccb;
+  --muted: #c2a271;
+  --border: #4a2f16;
+  --border-strong: #785027;
+  --accent: #e01b3c;
+  --accent-fg: #fff3d6;
+  --accent-2: #f2b705;
+  --danger: #ff6b5f;
+  --good: #3fbd7f;
+  --focus: #f2b705;
+  --shadow-1: 0 2px 0 rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .5);
+  --shadow-2: 0 16px 36px rgba(0, 0, 0, .68);
+  --sidebar-bg: #0d0605;
+  --sidebar-fg: #ffe9b0;
+  --rim-outer: #f2b705;
+  --rim-inner: #8c0c22;
+  --hub-bg: #8c0c22;
+  --hub-fg: #ffe9b0;
+  --pointer: #f2b705;
+  --slice-stroke: rgba(18, 10, 8, .5);
+  --wheel-shadow: 0 12px 32px rgba(0, 0, 0, .68), 0 0 0 6px rgba(242, 183, 5, .18);
+  --gloss: .34;
+}
+
+[data-mode="dark"][data-skin="feutre"] {
+  --bg: #17100f;
+  --bg-pattern:
+    repeating-linear-gradient(45deg, rgba(255, 230, 215, .030) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(255, 230, 215, .022) 0 2px, transparent 2px 7px);
+  --panel: #211615;
+  --panel-2: #2b1d1b;
+  --panel-3: #372421;
+  --fg: #f3e2d8;
+  --muted: #b99a8d;
+  --border: #3d2926;
+  --border-strong: #5a3a34;
+  --accent: #a8384a;
+  --accent-fg: #fff2ea;
+  --accent-2: #d2735a;
+  --danger: #e2685f;
+  --good: #5aa87a;
+  --focus: #d2735a;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .45), 0 6px 16px rgba(0, 0, 0, .4);
+  --shadow-2: 0 14px 32px rgba(0, 0, 0, .6);
+  --sidebar-bg: #1c1211;
+  --sidebar-fg: #f3e2d8;
+  --rim-outer: #8c2230;
+  --rim-inner: #17100f;
+  --hub-bg: #2b1d1b;
+  --hub-fg: #f3e2d8;
+  --pointer: #c04a54;
+  --slice-stroke: rgba(23, 16, 15, .5);
+  --wheel-shadow: 0 10px 28px rgba(0, 0, 0, .6);
+  --gloss: .2;
+}
+
+/* 3 ------------------------- Structure ------------------------- */
+.app { display: flex; min-height: 100dvh }
+
+/* Barre supérieure : uniquement en mode mobile (voir section responsive) */
+.topbar {
+  display: none;
+  position: sticky; top: 0; z-index: 40;
+  align-items: center; gap: 10px;
+  padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
+  background: var(--panel); border-bottom: 1px solid var(--border);
+}
+.topbar .title { font-family: var(--font-head); font-size: 16px; font-weight: 800 }
+
+/* --- Barre latérale --- */
+.sidebar {
+  flex: 0 0 auto; width: var(--sidebar-w);
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
+  background: var(--sidebar-bg); color: var(--sidebar-fg);
+  border-right: 1px solid var(--border);
+  position: sticky; top: 0; height: 100dvh; overflow-y: auto;
+  z-index: 50;
+  transition: transform .25s ease;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-head); font-size: 19px; font-weight: 800; letter-spacing: .2px }
+.brand .logo { font-size: 24px; line-height: 1 }
+.side-group { display: flex; flex-direction: column; gap: 8px }
+.side-label { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; opacity: .65; font-weight: 700 }
+
+/* Onglets */
+.tabs { display: flex; flex-direction: column; gap: 6px }
+.tab {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 46px; padding: 0 12px;
+  border-radius: var(--radius-sm); border: 1px solid transparent;
+  font-weight: 700; text-align: left; color: inherit;
+  transition: background .15s ease, transform .1s ease;
+}
+.tab:hover { background: rgba(128, 128, 128, .16) }
+.tab:active { transform: scale(.985) }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow-1) }
+.tab .ico { font-size: 18px }
+
+/* Sélecteur de thème */
+.skins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
+.skin {
+  min-height: 46px; padding: 6px 2px; border-radius: var(--radius-sm);
+  border: 1px solid rgba(128, 128, 128, .35);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 700; color: inherit;
+}
+.skin:hover { background: rgba(128, 128, 128, .16) }
+.skin[aria-pressed="true"] { border-color: currentColor; background: rgba(128, 128, 128, .22) }
+.skin .swatch { width: 100%; height: 14px; border-radius: 4px; border: 1px solid rgba(0, 0, 0, .18) }
+.skin[data-s="casino"] .swatch { background: linear-gradient(90deg, #c8102e 0 34%, #12100c 34% 67%, #f2b705 67%) }
+.skin[data-s="feutre"] .swatch { background: linear-gradient(90deg, #7b1e2b 0 34%, #b8543f 34% 67%, #f6ece1 67%) }
+.skin[data-s="blanc"] .swatch { background: linear-gradient(90deg, #ffffff 0 34%, #c3cad6 34% 67%, #1f2937 67%) }
+
+/* Interrupteurs */
+.switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 46px; padding: 0 12px; width: 100%;
+  border-radius: var(--radius-sm); border: 1px solid rgba(128, 128, 128, .35);
+  font-weight: 700; font-size: 13px; color: inherit;
+}
+.switch:hover { background: rgba(128, 128, 128, .14) }
+.switch .track {
+  flex: 0 0 auto; width: 40px; height: 22px; border-radius: 999px;
+  background: rgba(128, 128, 128, .38); position: relative; transition: background .18s ease;
+}
+.switch .track::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+  transition: transform .18s ease;
+}
+.switch[aria-pressed="true"] .track { background: var(--accent-2) }
+.switch[aria-pressed="true"] .track::after { transform: translateX(18px) }
+
+.side-foot { margin-top: auto; font-size: 12px; opacity: .75; line-height: 1.5 }
+.side-foot b { font-size: 15px }
+
+/* Voile mobile */
+.scrim {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .5);
+  z-index: 45; opacity: 0; pointer-events: none; transition: opacity .2s ease;
+}
+.scrim.on { opacity: 1; pointer-events: auto }
+
+/* --- Zone principale --- */
+.main {
+  flex: 1 1 auto; min-width: 0;
+  padding: 20px clamp(14px, 3vw, 30px) calc(48px + env(safe-area-inset-bottom));
+}
+.page-title { font-family: var(--font-head); font-size: clamp(20px, 3.4vw, 27px); font-weight: 800; margin-bottom: 4px }
+.page-sub { color: var(--muted); font-size: 13.5px; margin-bottom: 18px }
+
+/* Briques réutilisables */
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-1); padding: 16px;
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); background: var(--panel-2);
+  font-weight: 700; font-size: 14px;
+  transition: transform .1s ease, filter .15s ease, background .15s ease;
+}
+.btn:hover { filter: brightness(1.05) }
+.btn:active { transform: scale(.97) }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; box-shadow: var(--shadow-1) }
+.btn.ghost { background: transparent }
+.btn.danger { background: transparent; color: var(--danger); border-color: currentColor }
+.btn.sm { min-height: 36px; padding: 0 11px; font-size: 13px }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  border: 1px solid transparent; font-size: 16px; line-height: 1;
+}
+.icon-btn:hover { background: var(--panel-3) }
+.icon-btn svg { width: 17px; height: 17px }
+.icon-btn.danger:hover { background: var(--danger); color: #fff }
+
+/* 4 ------------------------- Onglet « Roue » ------------------------- */
+.roue-layout { display: grid; gap: 20px; grid-template-columns: 1fr; align-items: start }
+
+.wheel-panel { display: flex; flex-direction: column; align-items: center; gap: 16px }
+.wheel-stage { position: relative; width: min(84vw, 420px); aspect-ratio: 1 / 1 }
+
+/* Aiguille fixe, au sommet */
+.pointer { position: absolute; left: 50%; top: -10px; transform: translateX(-50%); z-index: 4; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .38)) }
+.pointer svg { width: 34px; height: 42px }
+.pointer .p-fill { fill: var(--pointer) }
+.pointer .p-edge { fill: rgba(0, 0, 0, .18) }
+
+/* Partie tournante (transform GPU uniquement) */
+.rotor { position: absolute; inset: 0; border-radius: 50%; will-change: transform; box-shadow: var(--wheel-shadow) }
+.rotor svg { width: 100%; height: 100% }
+.slice-label { font-family: var(--font); font-weight: 700; pointer-events: none; paint-order: stroke fill }
+.rim-outer { fill: none; stroke: var(--rim-outer); stroke-width: 3.4 }
+.rim-inner { fill: none; stroke: var(--rim-inner); stroke-width: 1.4; opacity: .8 }
+.wheel-empty { fill: var(--panel-2) }
+
+/* Moyeu central : sert aussi de bouton de lancement */
+.hub {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 24%; aspect-ratio: 1 / 1; border-radius: 50%; z-index: 3;
+  background: var(--hub-bg); color: var(--hub-fg);
+  border: 3px solid var(--rim-outer);
+  font-family: var(--font-head); font-weight: 800; font-size: clamp(11px, 2.6vw, 15px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .3), inset 0 2px 8px rgba(255, 255, 255, .25);
+  transition: transform .12s ease, filter .15s ease;
+}
+.hub:hover { filter: brightness(1.08) }
+.hub:active { transform: translate(-50%, -50%) scale(.94) }
+.hub:disabled { cursor: not-allowed; filter: grayscale(.35) }
+
+.spin-btn { min-height: 54px; font-size: 17px; padding: 0 34px; font-family: var(--font-head); letter-spacing: .02em }
+.spin-hint { font-size: 12px; color: var(--muted); text-align: center }
+.spin-hint kbd {
+  font-family: inherit; font-size: 11.5px; font-weight: 700; padding: 2px 7px;
+  border: 1px solid var(--border-strong); border-bottom-width: 2px;
+  border-radius: 6px; background: var(--panel-2); color: var(--fg);
+}
+
+/* Carte résultat */
+.result-card { position: relative; overflow: hidden; min-height: 190px; display: flex; flex-direction: column; gap: 8px; justify-content: center; text-align: center; padding: 22px }
+.result-card.pop { animation: pop .55s cubic-bezier(.2, 1.5, .4, 1) }
+@keyframes pop { 0% { transform: scale(.92) } 60% { transform: scale(1.03) } 100% { transform: scale(1) } }
+.result-kicker { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700 }
+.result-title { font-family: var(--font-head); font-size: clamp(24px, 6vw, 38px); font-weight: 800; line-height: 1.15; word-break: break-word }
+.result-desc { color: var(--muted); font-size: 15px; line-height: 1.55; max-width: 48ch; margin: 0 auto }
+.result-tag { display: inline-flex; align-items: center; gap: 7px; align-self: center; padding: 5px 12px; border-radius: 999px; background: var(--panel-2); font-size: 12px; font-weight: 700 }
+.dot { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .2); flex: 0 0 auto }
+.result-card .glow { position: absolute; inset: -40% -10% auto; height: 160px; background: radial-gradient(ellipse at center, var(--glow-c, transparent), transparent 70%); opacity: .5; pointer-events: none }
+
+/* Historique & statistiques */
+.mini { padding: 14px }
+.mini-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px }
+.mini-head h3 { font-family: var(--font-head); font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em }
+.hist li { display: flex; align-items: center; gap: 9px; padding: 7px 2px; border-bottom: 1px dashed var(--border); font-size: 13.5px }
+.hist li:last-child { border-bottom: none }
+.hist .h-time { margin-left: auto; color: var(--muted); font-size: 11.5px; white-space: nowrap }
+.hist .h-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.stat-row { display: flex; align-items: center; gap: 9px; font-size: 13.5px; padding: 6px 2px }
+.bar { flex: 1 1 auto; height: 8px; border-radius: 999px; background: var(--panel-3); overflow: hidden }
+.bar > i { display: block; height: 100%; border-radius: 999px; background: var(--accent-2) }
+.stat-n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums }
+.empty { color: var(--muted); font-size: 13px; font-style: italic; padding: 6px 2px }
+
+/* 5 ------------------------- Onglet « Gestion » ------------------------- */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0 }
+.field > span { font-size: 12px; font-weight: 700; color: var(--muted) }
+.input, select.input, textarea.input {
+  width: 100%; min-height: 44px; padding: 10px 12px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: var(--panel-2); color: var(--fg);
+}
+textarea.input { min-height: 92px; resize: vertical; line-height: 1.5 }
+.input:focus { outline: 3px solid var(--focus); outline-offset: 1px }
+input[type="color"].input { padding: 3px; height: 44px; cursor: pointer }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 18px 0 14px }
+.count-pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); font-size: 13px; font-weight: 700 }
+.count-pill b { color: var(--accent-2) }
+.spacer { flex: 1 1 auto }
+
+.cat-list { display: flex; flex-direction: column; gap: 12px }
+.cat { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow-1); overflow: hidden }
+.cat-head { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--panel-2); border-left: 6px solid var(--cat-c, var(--accent)) }
+.cat-head .cat-name {
+  flex: 1 1 auto; min-width: 60px; font-weight: 800; font-family: var(--font-head);
+  background: transparent; border: 1px solid transparent; border-radius: 7px;
+  padding: 7px 8px; font-size: 15px;
+}
+.cat-head .cat-name:hover { border-color: var(--border-strong); background: var(--panel) }
+.cat-head input[type="color"] { width: 44px; height: 40px; padding: 2px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--panel); cursor: pointer }
+.chev { transition: transform .18s ease; font-size: 13px }
+.cat.collapsed .chev { transform: rotate(-90deg) }
+.cat.collapsed .cat-body { display: none }
+.badge { font-size: 11.5px; font-weight: 700; color: var(--muted); background: var(--panel-3); padding: 4px 9px; border-radius: 999px; white-space: nowrap }
+
+.cat-body { padding: 4px 6px 8px }
+.res {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 6px 6px 10px; border-radius: var(--radius-sm);
+  border-bottom: 1px solid var(--border);
+}
+.res:last-child { border-bottom: none }
+.res:hover { background: var(--panel-2) }
+.res.off .res-name, .res.off .res-desc { opacity: .45; text-decoration: line-through }
+.res-main { flex: 1 1 auto; min-width: 0; text-align: left; padding: 4px 2px; border-radius: 7px }
+.res-name { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.res-desc { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+
+/* Cases à cocher : cible tactile confortable */
+.cb { width: 22px; height: 22px; flex: 0 0 auto; accent-color: var(--accent-2); cursor: pointer }
+.cb-wrap { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 auto; cursor: pointer }
+
+/* 6 ------------------- Modale / toast / confettis ------------------- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, .55); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.modal {
+  width: min(560px, 100%); max-height: 88dvh; overflow: auto;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-2); animation: rise .18s ease-out;
+}
+@keyframes rise { from { transform: translateY(12px); opacity: 0 } to { transform: none; opacity: 1 } }
+.modal header { display: flex; align-items: center; gap: 10px; padding: 14px 12px 14px 18px; border-bottom: 1px solid var(--border) }
+.modal header h2 { font-family: var(--font-head); font-size: 17px; font-weight: 800; flex: 1 1 auto }
+.modal-body { padding: 18px; display: flex; flex-direction: column; gap: 14px }
+.modal-body p { font-size: 14.5px; line-height: 1.6; color: var(--muted) }
+.modal-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; padding: 14px 18px; border-top: 1px solid var(--border); background: var(--panel-2) }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 14px); z-index: 200;
+  background: var(--fg); color: var(--bg);
+  padding: 12px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 700;
+  box-shadow: var(--shadow-2); opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease; max-width: min(92vw, 460px); text-align: center;
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0) }
+
+#confetti { position: fixed; inset: 0; z-index: 90; pointer-events: none }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip-link { position: absolute; left: -9999px; top: 0; z-index: 300; background: var(--accent); color: var(--accent-fg); padding: 10px 16px; border-radius: 0 0 8px 0 }
+.skip-link:focus { left: 0 }
+
+/* 7 ------------------------- Responsive ------------------------- */
+
+/* Deux colonnes confortables sur grand écran */
+@media (min-width: 1040px) {
+  .roue-layout { grid-template-columns: minmax(0, 1fr) minmax(340px, 430px); gap: 28px }
+  .wheel-stage { width: min(46vw, 480px) }
+}
+
+/* Mobile : la barre latérale devient un tiroir */
+@media (max-width: 640px) {
+  .topbar { display: flex }
+  .app { flex-direction: column }
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: min(84vw, 300px);
+    transform: translateX(-102%); box-shadow: var(--shadow-2);
+  }
+  .sidebar.open { transform: none }
+  .main { padding: 14px 14px calc(40px + env(safe-area-inset-bottom)) }
+  .wheel-stage { width: min(88vw, 400px) }
+  .result-card { min-height: 160px; padding: 18px 14px }
+  .modal-foot .btn { flex: 1 1 auto }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Aller au contenu</a>
+
+<!-- Barre supérieure (mobile uniquement) -->
+<header class="topbar">
+  <button class="icon-btn" id="burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="sidebar">&#9776;</button>
+  <span class="title">Roue de Fortune</span>
+</header>
+
+<div class="app">
+
+  <!-- ============ Barre latérale ============ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navigation principale">
+    <div class="brand"><span class="logo" aria-hidden="true">&#127920;</span> Roue de Fortune</div>
+
+    <nav class="side-group">
+      <span class="side-label" id="lbl-nav">Navigation</span>
+      <div class="tabs" role="tablist" aria-labelledby="lbl-nav">
+        <button class="tab" role="tab" id="tab-roue" aria-controls="panel-roue" aria-selected="true" data-tab="roue">
+          <span class="ico" aria-hidden="true">&#127920;</span> Roue
+        </button>
+        <button class="tab" role="tab" id="tab-gestion" aria-controls="panel-gestion" aria-selected="false" tabindex="-1" data-tab="gestion">
+          <span class="ico" aria-hidden="true">&#9881;</span> Gestion
+        </button>
+      </div>
+    </nav>
+
+    <div class="side-group">
+      <span class="side-label" id="lbl-skin">Style</span>
+      <div class="skins" role="group" aria-labelledby="lbl-skin">
+        <button class="skin" data-s="casino" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Casino</button>
+        <button class="skin" data-s="feutre" aria-pressed="false"><span class="swatch" aria-hidden="true"></span>Feutré</button>
+        <button class="skin" data-s="blanc" aria-pressed="true"><span class="swatch" aria-hidden="true"></span>Blanc</button>
+      </div>
+    </div>
+
+    <div class="side-group">
+      <span class="side-label">Préférences</span>
+      <button class="switch" id="toggleDark" aria-pressed="false">
+        <span><span aria-hidden="true">&#127769;</span> Mode nuit</span><span class="track" aria-hidden="true"></span>
+      </button>
+      <button class="switch" id="toggleSound" aria-pressed="true">
+        <span><span aria-hidden="true">&#128266;</span> Sons</span><span class="track" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="side-foot">
+      <b id="sideCount">0</b> résultat(s) actif(s)<br>
+      <span id="sideCats">0 catégorie(s)</span>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <!-- ============ Zone principale ============ -->
+  <main class="main" id="main">
+
+    <!-- ---------- Onglet 1 : la roue ---------- -->
+    <section id="panel-roue" role="tabpanel" aria-labelledby="tab-roue" tabindex="-1">
+      <div class="roue-layout">
+
+        <!-- Moitié haute : la roue -->
+        <div class="wheel-panel">
+          <div class="wheel-stage">
+            <div class="pointer" aria-hidden="true">
+              <svg viewBox="0 0 34 42"><path class="p-edge" d="M17 42 2 8a15 15 0 0 1 30 0Z"></path><path class="p-fill" d="M17 39 4.5 7.5a13 13 0 0 1 25 0Z"></path></svg>
+            </div>
+
+            <div class="rotor" id="rotor">
+              <svg viewBox="0 0 100 100" role="img" aria-labelledby="wheelDesc">
+                <title id="wheelDesc">Roue des résultats actifs</title>
+                <defs>
+                  <radialGradient id="gloss" cx="34%" cy="26%" r="74%">
+                    <stop offset="0%" stop-color="#fff" stop-opacity=".6"></stop>
+                    <stop offset="52%" stop-color="#fff" stop-opacity=".05"></stop>
+                    <stop offset="100%" stop-color="#000" stop-opacity=".34"></stop>
+                  </radialGradient>
+                </defs>
+                <g id="slices"></g>
+                <g id="labels"></g>
+                <circle cx="50" cy="50" r="47" fill="url(#gloss)" style="opacity:var(--gloss)" pointer-events="none"></circle>
+                <circle class="rim-outer" cx="50" cy="50" r="48.2"></circle>
+                <circle class="rim-inner" cx="50" cy="50" r="45.6"></circle>
+              </svg>
+            </div>
+
+            <button class="hub" id="hubBtn" title="Lancer la roue" aria-label="Lancer la roue">GO</button>
+          </div>
+
+          <button class="btn primary spin-btn" id="spinBtn"><span aria-hidden="true">&#127919;</span> Lancer</button>
+          <p class="spin-hint">Astuce : la touche <kbd>Entrée</kbd> lance aussi la roue.</p>
+        </div>
+
+        <!-- Moitié basse : le résultat -->
+        <div class="result-panel" style="display:flex;flex-direction:column;gap:14px">
+          <div class="card result-card" id="resultCard" role="status" aria-live="polite">
+            <span class="glow" aria-hidden="true"></span>
+            <p class="result-kicker">Résultat</p>
+            <h2 class="result-title" id="resultTitle">&mdash;</h2>
+            <p class="result-desc" id="resultDesc">Lancez la roue pour découvrir votre résultat.</p>
+            <span class="result-tag" id="resultTag" hidden><span class="dot" id="resultDot"></span><span id="resultCat"></span></span>
+          </div>
+
+          <div class="card mini">
+            <div class="mini-head">
+              <h3>Historique</h3>
+              <button class="btn sm ghost" id="clearHist">Vider</button>
+            </div>
+            <ol class="hist" id="histList"></ol>
+          </div>
+
+          <div class="card mini">
+            <div class="mini-head">
+              <h3>Statistiques</h3>
+              <button class="btn sm ghost" id="clearStats">Remettre à zéro</button>
+            </div>
+            <p class="stat-n" id="statTotal">Aucun tirage pour le moment.</p>
+            <div id="statTop"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ---------- Onglet 2 : gestion ---------- -->
+    <section id="panel-gestion" role="tabpanel" aria-labelledby="tab-gestion" tabindex="-1" hidden>
+      <h1 class="page-title">Gestion des résultats</h1>
+      <p class="page-sub">Ajoutez vos résultats, regroupez-les par catégorie colorée, cochez ceux qui doivent apparaître sur la roue.</p>
+
+      <form class="card" id="createForm" novalidate>
+        <div class="form-grid">
+          <label class="field">
+            <span>Nom du résultat *</span>
+            <input class="input" id="fName" maxlength="60" placeholder="Ex. Café" autocomplete="off" required>
+          </label>
+          <label class="field">
+            <span>Description / définition</span>
+            <input class="input" id="fDesc" maxlength="240" placeholder="Ex. Un espresso serré." autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Catégorie</span>
+            <select class="input" id="fCat"></select>
+          </label>
+          <label class="field" id="fNewWrap" hidden>
+            <span>Nom de la nouvelle catégorie *</span>
+            <input class="input" id="fNewCat" maxlength="40" placeholder="Ex. Boissons" autocomplete="off">
+          </label>
+          <label class="field" style="max-width:130px">
+            <span>Couleur</span>
+            <input class="input" type="color" id="fColor" value="#d64545">
+          </label>
+        </div>
+        <button class="btn primary" type="submit"><span aria-hidden="true">&#43;</span> Ajouter</button>
+      </form>
+
+      <div class="toolbar">
+        <span class="count-pill"><b id="countActive">0</b> actif(s) sur <span id="countTotal">0</span></span>
+        <span class="spacer"></span>
+        <button class="btn sm" id="btnExport"><span aria-hidden="true">&#8681;</span> Exporter</button>
+        <button class="btn sm" id="btnImport"><span aria-hidden="true">&#8679;</span> Importer</button>
+        <button class="btn sm danger" id="btnReset"><span aria-hidden="true">&#8635;</span> Réinitialiser</button>
+      </div>
+
+      <div class="cat-list" id="catList"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Modale générique (édition, confirmations, import/export) -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header>
+      <h2 id="modalTitle"></h2>
+      <button class="icon-btn" id="modalClose" aria-label="Fermer">&#10005;</button>
+    </header>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<canvas id="confetti" aria-hidden="true" hidden></canvas>
+<input type="file" id="fileInput" accept="application/json,.json" hidden>
+
+<script>
+/* ==========================================================================
+   ROUE DE FORTUNE - logique applicative (JavaScript vanilla, zéro dependance)
+   Sommaire :
+     A. Utilitaires             E. Onglet Gestion
+     B. État & persistance      F. Modale, toast, import/export
+     C. Thèmes & navigation     G. Effets (son, confettis) & démarrage
+     D. Roue (rendu + tirage)
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  /* == A. Utilitaires ===================================================== */
+
+  const $  = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.prototype.slice.call((root || document).querySelectorAll(sel));
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+  const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  /** Échappe le texte destiné à être injecté en HTML. */
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* --- Couleurs : normalisation, contraste, éclaircissement --- */
+
+  function normalizeHex(c, fallback) {
+    if (typeof c !== 'string') return fallback || '#888888';
+    let h = c.trim();
+    if (/^#[0-9a-f]{3}$/i.test(h)) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+    return /^#[0-9a-f]{6}$/i.test(h) ? h.toLowerCase() : (fallback || '#888888');
+  }
+
+  function hexToRgb(hex) {
+    const h = normalizeHex(hex);
+    return { r: parseInt(h.slice(1, 3), 16), g: parseInt(h.slice(3, 5), 16), b: parseInt(h.slice(5, 7), 16) };
+  }
+
+  const toHex = (n) => clamp(Math.round(n), 0, 255).toString(16).padStart(2, '0');
+
+  /** Mélange une couleur vers le blanc (p > 0) ou vers le noir (p < 0). */
+  function shade(hex, p) {
+    const { r, g, b } = hexToRgb(hex);
+    const t = p > 0 ? 255 : 0;
+    const a = Math.abs(p);
+    return '#' + toHex(r + (t - r) * a) + toHex(g + (t - g) * a) + toHex(b + (t - b) * a);
+  }
+
+  /** Noir ou blanc selon la luminance relative (WCAG) du fond. */
+  function textOn(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    return L > 0.42 ? '#101010' : '#ffffff';
+  }
+
+  /* == B. État & persistance ============================================== */
+
+  const STORAGE_KEY = 'roue-fortune-v1';
+  const MAX_HISTORY = 10;
+
+  /** Jeu de données proposé à la première visite. */
+  function defaultState() {
+    const c1 = uid(), c2 = uid();
+    return {
+      version: 1,
+      skin: 'blanc',
+      dark: window.matchMedia('(prefers-color-scheme: dark)').matches,
+      sound: true,
+      categories: [
+        { id: c1, name: 'Boissons', color: '#d64545', collapsed: false },
+        { id: c2, name: 'Pauses',   color: '#2f8f6f', collapsed: false }
+      ],
+      results: [
+        { id: uid(), name: 'Café',        desc: 'Un espresso serré pour attaquer la journée.',    cat: c1, active: true },
+        { id: uid(), name: 'Thé vert',    desc: 'Une pause douce, sans excès de caféine.',        cat: c1, active: true },
+        { id: uid(), name: "Jus d'orange", desc: 'Vitamine C et fraîcheur immédiate.',            cat: c1, active: true },
+        { id: uid(), name: 'Marche',      desc: "Dix minutes dehors pour s'aérer la tête.",       cat: c2, active: true },
+        { id: uid(), name: 'Lecture',     desc: "Un quart d'heure avec le livre en cours.",       cat: c2, active: true }
+      ],
+      last: null,                 // dernier résultat obtenu {name, desc, color, catName}
+      history: [],                // 10 derniers tirages
+      stats: { total: 0, counts: {} }
+    };
+  }
+
+  /**
+   * Valide et complète une structure venant du stockage ou d'un import.
+   * Renvoie null uniquement si la structure est inexploitable ; une liste
+   * vide reste un état légitime (l'utilisateur a pu tout supprimer).
+   */
+  function sanitize(raw) {
+    if (!raw || typeof raw !== 'object' || !Array.isArray(raw.categories)) return null;
+    const categories = raw.categories
+      .filter((c) => c && typeof c.name === 'string')
+      .map((c) => ({
+        id: String(c.id || uid()),
+        name: c.name.slice(0, 40) || 'Sans nom',
+        color: normalizeHex(c.color, '#888888'),
+        collapsed: !!c.collapsed
+      }));
+
+    const known = new Set(categories.map((c) => c.id));
+    const results = (Array.isArray(raw.results) ? raw.results : [])
+      .filter((r) => r && typeof r.name === 'string' && known.has(String(r.cat)))
+      .map((r) => ({
+        id: String(r.id || uid()),
+        name: r.name.slice(0, 60) || 'Sans nom',
+        desc: typeof r.desc === 'string' ? r.desc.slice(0, 240) : '',
+        cat: String(r.cat),
+        active: r.active !== false
+      }));
+
+    return {
+      version: 1,
+      skin: ['casino', 'feutre', 'blanc'].indexOf(raw.skin) >= 0 ? raw.skin : 'blanc',
+      dark: typeof raw.dark === 'boolean' ? raw.dark : window.matchMedia('(prefers-color-scheme: dark)').matches,
+      sound: raw.sound !== false,
+      categories: categories,
+      results: results,
+      last: raw.last && typeof raw.last === 'object' ? raw.last : null,
+      history: Array.isArray(raw.history) ? raw.history.slice(0, MAX_HISTORY) : [],
+      stats: (raw.stats && typeof raw.stats === 'object' && raw.stats.counts)
+        ? { total: Number(raw.stats.total) || 0, counts: raw.stats.counts }
+        : { total: 0, counts: {} }
+    };
+  }
+
+  function load() {
+    try { return sanitize(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
+    catch (e) { return null; }
+  }
+
+  let saveTimer = null;
+  function save() {                                  // écriture regroupée (anti-rebond)
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      catch (e) { /* quota dépassé ou navigation privée : l'app reste utilisable */ }
+    }, 150);
+  }
+
+  let state = load() || defaultState();
+
+  const catById = (id) => state.categories.find((c) => c.id === id) || null;
+  const resById = (id) => state.results.find((r) => r.id === id) || null;
+  const activeResults = () => state.results.filter((r) => r.active && catById(r.cat));
+
+  /* == C. Thèmes & navigation ============================================= */
+
+  const root = document.documentElement;
+
+  function applyTheme() {
+    root.setAttribute('data-skin', state.skin);
+    if (state.dark) root.setAttribute('data-mode', 'dark');
+    else root.removeAttribute('data-mode');
+    $$('.skin').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === state.skin)));
+    $('#toggleDark').setAttribute('aria-pressed', String(!!state.dark));
+    $('#toggleSound').setAttribute('aria-pressed', String(!!state.sound));
+  }
+
+  $$('.skin').forEach((btn) => btn.addEventListener('click', () => {
+    state.skin = btn.dataset.s; applyTheme(); save(); renderWheel();
+  }));
+
+  $('#toggleDark').addEventListener('click', () => {
+    state.dark = !state.dark; applyTheme(); save(); renderWheel();
+  });
+
+  $('#toggleSound').addEventListener('click', () => {
+    state.sound = !state.sound; applyTheme(); save();
+    if (state.sound) playTick(1);
+  });
+
+  /* --- Onglets (ARIA + navigation clavier) --- */
+  function selectTab(name) {
+    $$('.tab').forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+    });
+    $('#panel-roue').hidden = name !== 'roue';
+    $('#panel-gestion').hidden = name !== 'gestion';
+    if (name === 'gestion') renderGestion();
+    closeDrawer();
+  }
+
+  $$('.tab').forEach((t) => {
+    t.addEventListener('click', () => selectTab(t.dataset.tab));
+    t.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const tabs = $$('.tab');
+      const i = tabs.indexOf(t);
+      const next = tabs[(i + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus(); selectTab(next.dataset.tab);
+    });
+  });
+
+  /* --- Tiroir mobile --- */
+  const sidebar = $('#sidebar'), scrim = $('#scrim'), burger = $('#burger');
+  function openDrawer() { sidebar.classList.add('open'); scrim.hidden = false; requestAnimationFrame(() => scrim.classList.add('on')); burger.setAttribute('aria-expanded', 'true'); }
+  function closeDrawer() {
+    if (!sidebar.classList.contains('open')) return;
+    sidebar.classList.remove('open'); scrim.classList.remove('on'); burger.setAttribute('aria-expanded', 'false');
+    setTimeout(() => { scrim.hidden = true; }, 220);
+  }
+  burger.addEventListener('click', () => (sidebar.classList.contains('open') ? closeDrawer() : openDrawer()));
+  scrim.addEventListener('click', closeDrawer);
+
+  /* == D. La roue ========================================================= */
+
+  const rotor = $('#rotor');
+  const gSlices = $('#slices');
+  const gLabels = $('#labels');
+  const spinBtn = $('#spinBtn');
+  const hubBtn = $('#hubBtn');
+
+  const CX = 50, CY = 50, R = 45;      // repère du viewBox 0 0 100 100
+  let rotation = 0;                     // angle courant de la roue, en degrés
+  let spinning = false;
+  let wheelDirty = false;               // demande de rendu différée pendant une rotation
+
+  /** Point du cercle à l'angle donné, mesuré dans le sens horaire depuis le haut. */
+  function polar(r, deg) {
+    const a = (deg - 90) * Math.PI / 180;
+    return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+  }
+
+  /** Indice du secteur situé sous l'aiguille pour une rotation donnee. */
+  function indexAtPointer(rot, n) {
+    const a = ((360 - (rot % 360)) % 360 + 360) % 360;
+    return Math.floor(a / (360 / n)) % n;
+  }
+
+  /** (Re)dessiné les secteurs et les étiquettes à partir des résultats actifs. */
+  function renderWheel() {
+    if (spinning) { wheelDirty = true; return; }
+
+    const list = activeResults();
+    const n = list.length;
+    gSlices.innerHTML = '';
+    gLabels.innerHTML = '';
+
+    if (n === 0) {                                   // aucun résultat coché
+      gSlices.innerHTML = '<circle class="wheel-empty" cx="50" cy="50" r="45"></circle>';
+      gLabels.innerHTML = '<text x="50" y="46" text-anchor="middle" font-size="5" fill="currentColor" opacity=".65">Aucun résultat</text>'
+                        + '<text x="50" y="54" text-anchor="middle" font-size="4" fill="currentColor" opacity=".5">Onglet Gestion</text>';
+      setSpinEnabled(false);
+      return;
+    }
+    setSpinEnabled(true);
+
+    const seg = 360 / n;
+    // Etiquettes radiales : le texte court le long du rayon, entre le moyeu et la
+    // jante. RT = rayon du milieu du texte, LEN = longueur radiale disponible.
+    const RT = 29, LEN = 27;
+    // Epaisseur tangentielle offerte par un secteur a ce rayon : plafonne le corps.
+    const fsMax = clamp((2 * Math.PI * RT / n) * 0.62, 1.9, 5.4);
+    const showLabels = n <= 40;
+
+    let slices = '', labels = '';
+
+    for (let i = 0; i < n; i++) {
+      const r = list[i];
+      const cat = catById(r.cat);
+      const base = normalizeHex(cat ? cat.color : '#888888');
+      // Légère alternance clair/foncé pour distinguer deux secteurs voisins de même catégorie.
+      const fill = n > 1 ? shade(base, i % 2 ? 0.14 : -0.07) : base;
+      const a0 = i * seg, a1 = (i + 1) * seg;
+
+      if (n === 1) {
+        slices += '<circle cx="50" cy="50" r="' + R + '" fill="' + fill + '"></circle>';
+      } else {
+        const p0 = polar(R, a0), p1 = polar(R, a1);
+        const large = seg > 180 ? 1 : 0;
+        slices += '<path d="M' + CX + ' ' + CY + ' L' + p0[0].toFixed(3) + ' ' + p0[1].toFixed(3)
+                + ' A' + R + ' ' + R + ' 0 ' + large + ' 1 ' + p1[0].toFixed(3) + ' ' + p1[1].toFixed(3) + ' Z"'
+                + ' fill="' + fill + '" stroke="var(--slice-stroke)" stroke-width=".45"></path>';
+      }
+
+      if (showLabels) {
+        const mid = a0 + seg / 2;
+        // Un nom long reduit son corps de texte plutot que d'etre tronque.
+        let fs = Math.min(fsMax, LEN / (0.55 * Math.max(1, r.name.length)));
+        fs = Math.max(fs, Math.min(fsMax, 2.4));
+        const maxChars = Math.max(3, Math.floor(LEN / (0.55 * fs)));
+        const txt = r.name.length > maxChars ? r.name.slice(0, maxChars - 1) + '…' : r.name;
+        // Le texte est pose sur le rayon du haut puis pivote a sa place ; sur la
+        // moitie gauche il est retourne pour rester lisible a l'endroit.
+        const flip = mid < 180 ? -90 : 90;
+        labels += '<text class="slice-label"'
+                + ' transform="rotate(' + mid.toFixed(3) + ' ' + CX + ' ' + CY + ') rotate(' + flip + ' ' + CX + ' ' + (CY - RT) + ')"'
+                + ' x="' + CX + '" y="' + (CY - RT) + '" text-anchor="middle" dominant-baseline="central"'
+                + ' font-size="' + fs.toFixed(2) + '" fill="' + textOn(fill) + '">' + esc(txt) + '</text>';
+      }
+    }
+
+    gSlices.innerHTML = slices;
+    gLabels.innerHTML = labels;
+    rotor.style.transform = 'rotate(' + rotation + 'deg)';
+  }
+
+  function setSpinEnabled(on) {
+    spinBtn.disabled = !on;
+    hubBtn.disabled = !on;
+  }
+
+  /**
+   * Courbe d'animation : accélération douce sur les 12 premiers pour cent,
+   * puis longue décélération (quartique). Continue et dérivable en t = 0,12.
+   */
+  function ease(t) {
+    const p = t < 0.12 ? (t * t) / 0.24 : t - 0.06;
+    const u = p / 0.94;
+    return 1 - Math.pow(1 - u, 4);
+  }
+
+  let rafId = null;
+
+  function spin() {
+    if (spinning) return;
+    const list = activeResults();            // fige la liste pour toute la rotation
+    if (!list.length) { toast("Cochez au moins un résultat dans l'onglet Gestion."); return; }
+
+    spinning = true;
+    setSpinEnabled(false);
+    $('#resultCard').classList.remove('pop');
+
+    const n = list.length;
+    const seg = 360 / n;
+    const winner = Math.floor(Math.random() * n);            // tirage uniforme
+
+    // Angle visé (repère de la roue) : centre du secteur + petit décalage aléatoire.
+    const jitter = (Math.random() - 0.5) * seg * 0.66;
+    const targetWheelAngle = winner * seg + seg / 2 + jitter;
+    const targetMod = ((360 - targetWheelAngle) % 360 + 360) % 360;
+    const startMod = ((rotation % 360) + 360) % 360;
+    const turns = 4 + Math.floor(Math.random() * 3);         // 4 à 6 tours complets
+    const delta = ((targetMod - startMod + 360) % 360) + turns * 360;
+
+    const start = rotation;
+    const dur = reduceMotion ? 450 : 2600 + Math.random() * 700;
+    const t0 = performance.now();
+    let lastIdx = -1;
+
+    function frame(now) {
+      const t = clamp((now - t0) / dur, 0, 1);
+      rotation = start + delta * ease(t);
+      rotor.style.transform = 'rotate(' + rotation + 'deg)';
+
+      const idx = indexAtPointer(rotation, n);              // clic à chaque secteur franchi
+      if (idx !== lastIdx) { lastIdx = idx; if (t < 0.995) playTick(1 - t); }
+
+      if (t < 1) { rafId = requestAnimationFrame(frame); }
+      else { rotation = start + delta; spinning = false; finish(list[winner]); }
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  /** Fin de rotation : affichage, historique, statistiques, effets. */
+  function finish(res) {
+    const cat = catById(res.cat);
+    state.last = {
+      id: res.id,
+      name: res.name,
+      desc: res.desc,
+      color: cat ? cat.color : '#888888',
+      catName: cat ? cat.name : ''
+    };
+    state.history.unshift({ name: res.name, color: state.last.color, at: Date.now() });
+    state.history = state.history.slice(0, MAX_HISTORY);
+    state.stats.total += 1;
+    state.stats.counts[res.id] = (state.stats.counts[res.id] || 0) + 1;
+    save();
+
+    renderResult(true);
+    renderHistory();
+    setSpinEnabled(true);
+    playWin();
+    confetti(state.last.color);
+
+    if (wheelDirty) { wheelDirty = false; renderWheel(); }
+  }
+
+  spinBtn.addEventListener('click', spin);
+  hubBtn.addEventListener('click', spin);
+
+  // Entrée = lancer, sauf si l'on est en train de saisir du texte ou dans une modale.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.repeat) return;
+    if (!$('#modalBackdrop').hidden) return;
+    const el = document.activeElement;
+    if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable || el.tagName === 'BUTTON')) return;
+    if ($('#panel-roue').hidden) return;
+    e.preventDefault();
+    spin();
+  });
+
+  /* --- Affichage du résultat, de l'historique et des statistiques --- */
+
+  function renderResult(animate) {
+    const card = $('#resultCard');
+    const last = state.last;
+    if (!last) {
+      $('#resultTitle').textContent = '—';
+      $('#resultDesc').textContent = 'Lancez la roue pour découvrir votre résultat.';
+      $('#resultTag').hidden = true;
+      card.style.setProperty('--glow-c', 'transparent');
+      return;
+    }
+    $('#resultTitle').textContent = last.name;
+    $('#resultDesc').textContent = last.desc || 'Aucune description pour ce résultat.';
+    $('#resultTag').hidden = !last.catName;
+    $('#resultCat').textContent = last.catName || '';
+    $('#resultDot').style.background = last.color;
+    card.style.setProperty('--glow-c', last.color);
+    if (animate) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
+  }
+
+  function renderHistory() {
+    const ol = $('#histList');
+    if (!state.history.length) {
+      ol.innerHTML = '<li class="empty">Aucun tirage pour le moment.</li>';
+    } else {
+      ol.innerHTML = state.history.map((h) => {
+        const d = new Date(h.at);
+        const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        return '<li><span class="dot" style="background:' + esc(normalizeHex(h.color)) + '"></span>'
+             + '<span class="h-name">' + esc(h.name) + '</span><span class="h-time">' + hh + '</span></li>';
+      }).join('');
+    }
+
+    const total = state.stats.total;
+    $('#statTotal').textContent = total
+      ? total + ' tirage(s) enregistré(s).'
+      : 'Aucun tirage pour le moment.';
+
+    const top = Object.keys(state.stats.counts)
+      .map((id) => ({ res: resById(id), n: state.stats.counts[id] }))
+      .filter((x) => x.res)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 4);
+
+    $('#statTop').innerHTML = top.length
+      ? top.map((x) => {
+          const cat = catById(x.res.cat);
+          const pct = Math.round((x.n / Math.max(1, top[0].n)) * 100);
+          return '<div class="stat-row"><span class="dot" style="background:' + esc(normalizeHex(cat ? cat.color : '#888')) + '"></span>'
+               + '<span class="h-name" style="min-width:70px">' + esc(x.res.name) + '</span>'
+               + '<span class="bar"><i style="width:' + pct + '%;background:' + esc(normalizeHex(cat ? cat.color : '#888')) + '"></i></span>'
+               + '<span class="stat-n">' + x.n + '</span></div>';
+        }).join('')
+      : '';
+  }
+
+  $('#clearHist').addEventListener('click', () => {
+    state.history = []; save(); renderHistory(); toast('Historique vide.');
+  });
+
+  $('#clearStats').addEventListener('click', async () => {
+    if (!(await confirmDialog('Remettre les statistiques à zéro ?', 'Les compteurs de tirage seront effacés.'))) return;
+    state.stats = { total: 0, counts: {} }; save(); renderHistory(); toast('Statistiques remises à zéro.');
+  });
+
+  /* == E. Onglet Gestion ================================================== */
+
+  const NEW_CAT = '__new__';
+
+  // Icones inline : contrairement aux emojis, elles suivent la couleur du theme.
+  const ICO_EDIT = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
+    + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
+  const ICO_DEL = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
+    + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path>'
+    + '<path d="M10 11v6M14 11v6"></path></svg>';
+  const PALETTE = ['#d64545', '#e08a1e', '#c9a227', '#2f8f6f', '#2b7bb9', '#6a4fb6', '#c2559b', '#5a6b7d'];
+
+  /** Remplit un <select> avec les catégories (option « nouvelle » optionnelle). */
+  function fillCatSelect(sel, selectedId, withNew) {
+    sel.innerHTML = state.categories
+      .map((c) => '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>').join('')
+      + (withNew ? '<option value="' + NEW_CAT + '">+ Nouvelle catégorie…</option>' : '');
+    if (selectedId) sel.value = selectedId;
+    if (!sel.value && sel.options.length) sel.selectedIndex = 0;
+  }
+
+  const fCat = $('#fCat'), fColor = $('#fColor'), fNewWrap = $('#fNewWrap'), fNewCat = $('#fNewCat');
+
+  function syncCreateForm() {
+    const isNew = fCat.value === NEW_CAT || !state.categories.length;
+    fNewWrap.hidden = !isNew;
+    if (isNew) {
+      fColor.value = PALETTE[state.categories.length % PALETTE.length];
+    } else {
+      const c = catById(fCat.value);
+      if (c) fColor.value = normalizeHex(c.color);
+    }
+  }
+
+  fCat.addEventListener('change', syncCreateForm);
+
+  // Le sélecteur de couleur édite directement la catégorie choisie.
+  fColor.addEventListener('input', () => {
+    const c = catById(fCat.value);
+    if (!c) return;
+    c.color = normalizeHex(fColor.value);
+    save(); renderWheel(); renderGestion(); renderResultDot();
+  });
+
+  $('#createForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('#fName').value.trim();
+    if (!name) { $('#fName').focus(); toast('Le nom du résultat est obligatoire.'); return; }
+
+    let catId = fCat.value;
+    if (catId === NEW_CAT || !state.categories.length) {
+      const cname = fNewCat.value.trim();
+      if (!cname) { fNewCat.focus(); toast('Donnez un nom à la nouvelle catégorie.'); return; }
+      const cat = { id: uid(), name: cname, color: normalizeHex(fColor.value), collapsed: false };
+      state.categories.push(cat);
+      catId = cat.id;
+      fNewCat.value = '';
+    }
+
+    state.results.push({ id: uid(), name: name, desc: $('#fDesc').value.trim(), cat: catId, active: true });
+    save();
+
+    $('#fName').value = ''; $('#fDesc').value = '';
+    fillCatSelect(fCat, catId, true);
+    syncCreateForm();
+    renderGestion(); renderWheel();
+    $('#fName').focus();
+    toast('« ' + name + ' » ajoute.');
+  });
+
+  /** Met à jour les compteurs (barre latérale + barre d'outils). */
+  function updateCounters() {
+    const nb = activeResults().length;
+    $('#countActive').textContent = nb;
+    $('#countTotal').textContent = state.results.length;
+    $('#sideCount').textContent = nb;
+    $('#sideCats').textContent = state.categories.length + ' catégorie(s)';
+  }
+
+  /**
+   * Rafraîchit le badge et la case d'une seule catégorie.
+   * Évite de reconstruire toute la liste (et donc de perdre le focus clavier).
+   */
+  function refreshCatHeader(catId) {
+    const sec = catList.querySelector('.cat[data-cat="' + catId + '"]');
+    if (!sec) return;
+    const items = state.results.filter((r) => r.cat === catId);
+    const on = items.filter((r) => r.active).length;
+    sec.querySelector('.badge').textContent = on + '/' + items.length;
+    const box = sec.querySelector('input[data-act="toggle-cat"]');
+    if (box) {
+      box.checked = items.length > 0 && on === items.length;
+      box.indeterminate = items.length > 0 && on > 0 && on < items.length;
+    }
+  }
+
+  /** Reconstruit la liste des catégories et de leurs résultats. */
+  function renderGestion() {
+    fillCatSelect(fCat, fCat.value && fCat.value !== NEW_CAT ? fCat.value : null, true);
+    syncCreateForm();
+    updateCounters();
+
+    const list = $('#catList');
+    if (!state.categories.length) {
+      list.innerHTML = '<div class="card empty">Aucune catégorie. Créez-en une avec le formulaire ci-dessus.</div>';
+      return;
+    }
+
+    list.innerHTML = state.categories.map((cat) => {
+      const items = state.results.filter((r) => r.cat === cat.id);
+      const on = items.filter((r) => r.active).length;
+      const color = normalizeHex(cat.color);
+
+      const rows = items.length
+        ? items.map((r) => (
+            '<div class="res' + (r.active ? '' : ' off') + '" data-id="' + esc(r.id) + '"'
+            + ' title="' + esc(r.desc || 'Aucune description') + '">'
+            + '<label class="cb-wrap"><input type="checkbox" class="cb" data-act="toggle-res" data-id="' + esc(r.id) + '"'
+            + (r.active ? ' checked' : '') + ' aria-label="Inclure ' + esc(r.name) + ' dans la roue"></label>'
+            + '<button class="res-main" data-act="edit" data-id="' + esc(r.id) + '">'
+            + '<div class="res-name">' + esc(r.name) + '</div>'
+            + '<div class="res-desc">' + esc(r.desc || 'Aucune description') + '</div></button>'
+            + '<button class="icon-btn" data-act="edit" data-id="' + esc(r.id) + '" aria-label="Modifier ' + esc(r.name) + '">' + ICO_EDIT + '</button>'
+            + '<button class="icon-btn danger" data-act="del-res" data-id="' + esc(r.id) + '" aria-label="Supprimer ' + esc(r.name) + '">' + ICO_DEL + '</button>'
+            + '</div>'
+          )).join('')
+        : '<p class="empty">Catégorie vide.</p>';
+
+      return '<section class="cat' + (cat.collapsed ? ' collapsed' : '') + '" data-cat="' + esc(cat.id) + '" style="--cat-c:' + esc(color) + '">'
+        + '<header class="cat-head">'
+        + '<label class="cb-wrap"><input type="checkbox" class="cb" data-act="toggle-cat" data-id="' + esc(cat.id) + '"'
+        + (items.length && on === items.length ? ' checked' : '') + (items.length ? '' : ' disabled')
+        + ' aria-label="Afficher tous les résultats de ' + esc(cat.name) + '"></label>'
+        + '<button class="icon-btn" data-act="fold" data-id="' + esc(cat.id) + '" aria-label="Plier ou déplier ' + esc(cat.name) + '" aria-expanded="' + (!cat.collapsed) + '"><span class="chev">&#9660;</span></button>'
+        + '<input class="cat-name" value="' + esc(cat.name) + '" maxlength="40" data-act="rename" data-id="' + esc(cat.id) + '" aria-label="Nom de la catégorie">'
+        + '<span class="badge">' + on + '/' + items.length + '</span>'
+        + '<input type="color" value="' + esc(color) + '" data-act="recolor" data-id="' + esc(cat.id) + '" aria-label="Couleur de ' + esc(cat.name) + '">'
+        + '<button class="icon-btn danger" data-act="del-cat" data-id="' + esc(cat.id) + '" aria-label="Supprimer la catégorie ' + esc(cat.name) + '">' + ICO_DEL + '</button>'
+        + '</header>'
+        + '<div class="cat-body">' + rows + '</div></section>';
+    }).join('');
+
+    // Case de catégorie partiellement cochée -> état indéterminé
+    state.categories.forEach((cat) => {
+      const items = state.results.filter((r) => r.cat === cat.id);
+      const on = items.filter((r) => r.active).length;
+      const box = list.querySelector('input[data-act="toggle-cat"][data-id="' + cat.id + '"]');
+      if (box) box.indeterminate = items.length > 0 && on > 0 && on < items.length;
+    });
+  }
+
+  /* --- Événements délégués sur la liste --- */
+  const catList = $('#catList');
+
+  catList.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const act = el.dataset.act, id = el.dataset.id;
+
+    if (act === 'toggle-res') {
+      const r = resById(id);
+      if (!r) return;
+      r.active = el.checked;
+      const row = el.closest('.res');
+      if (row) row.classList.toggle('off', !r.active);
+      refreshCatHeader(r.cat);
+
+    } else if (act === 'toggle-cat') {
+      // La case d'en-tête pilote tous les résultats de la catégorie.
+      state.results.forEach((r) => { if (r.cat === id) r.active = el.checked; });
+      const sec = el.closest('.cat');
+      if (sec) $$('.res', sec).forEach((row) => {
+        row.classList.toggle('off', !el.checked);
+        const cb = row.querySelector('input[data-act="toggle-res"]');
+        if (cb) cb.checked = el.checked;
+      });
+      el.indeterminate = false;
+      refreshCatHeader(id);
+
+    } else if (act === 'rename') {
+      const c = catById(id);
+      if (c) c.name = el.value.trim() || c.name;
+      el.value = c ? c.name : el.value;
+      // Un renommage change aussi la liste déroulante : re-rendu complet.
+      save(); renderGestion(); renderWheel();
+      return;
+
+    } else { return; }
+
+    updateCounters();
+    save();
+    renderWheel();
+  });
+
+  // Aperçu immédiat pendant le glissement du sélecteur de couleur
+  catList.addEventListener('input', (e) => {
+    const el = e.target.closest('[data-act="recolor"]');
+    if (!el) return;
+    const c = catById(el.dataset.id);
+    if (!c) return;
+    c.color = normalizeHex(el.value);
+    el.closest('.cat').style.setProperty('--cat-c', c.color);
+    save(); renderWheel(); renderResultDot();
+  });
+
+  catList.addEventListener('click', async (e) => {
+    const el = e.target.closest('button[data-act]');
+    if (!el) return;
+    const act = el.dataset.act, id = el.dataset.id;
+
+    if (act === 'fold') {
+      const c = catById(id); if (!c) return;
+      c.collapsed = !c.collapsed;
+      el.closest('.cat').classList.toggle('collapsed', c.collapsed);
+      el.setAttribute('aria-expanded', String(!c.collapsed));
+      save();
+    } else if (act === 'edit') {
+      openEditModal(id);
+    } else if (act === 'del-res') {
+      const r = resById(id); if (!r) return;
+      if (!(await confirmDialog('Supprimer « ' + r.name + ' » ?', 'Ce résultat sera définitivement retiré de la liste.'))) return;
+      state.results = state.results.filter((x) => x.id !== id);
+      save(); renderGestion(); renderWheel(); toast('Résultat supprimé.');
+    } else if (act === 'del-cat') {
+      const c = catById(id); if (!c) return;
+      const n = state.results.filter((r) => r.cat === id).length;
+      const msg = n ? 'La catégorie et ses ' + n + ' résultat(s) seront supprimés.' : 'Cette catégorie est vide.';
+      if (!(await confirmDialog('Supprimer la catégorie « ' + c.name + ' » ?', msg))) return;
+      state.categories = state.categories.filter((x) => x.id !== id);
+      state.results = state.results.filter((r) => r.cat !== id);
+      save(); renderGestion(); renderWheel(); toast('Catégorie supprimée.');
+    }
+  });
+
+  /** Met à jour la pastille de couleur du dernier résultat si sa catégorie a change. */
+  function renderResultDot() {
+    if (!state.last || !state.last.id) return;
+    const r = resById(state.last.id);
+    const c = r ? catById(r.cat) : null;
+    if (!c) return;
+    state.last.color = normalizeHex(c.color);
+    state.last.catName = c.name;
+    $('#resultDot').style.background = state.last.color;
+    $('#resultCat').textContent = c.name;
+    $('#resultCard').style.setProperty('--glow-c', state.last.color);
+  }
+
+  /* == F. Modale, toast, import / export ================================== */
+
+  const backdrop = $('#modalBackdrop');
+  const modalBody = $('#modalBody');
+  const modalFoot = $('#modalFoot');
+  let lastFocus = null;
+
+  /**
+   * Ouvre la modale générique.
+   * @param {{title:string, body:string, buttons:Array, onOpen?:Function}} opts
+   */
+  function openModal(opts) {
+    lastFocus = document.activeElement;
+    $('#modalTitle').textContent = opts.title;
+    modalBody.innerHTML = opts.body;
+    modalFoot.innerHTML = '';
+
+    (opts.buttons || []).forEach((b) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn ' + (b.cls || '');
+      btn.textContent = b.label;
+      btn.addEventListener('click', () => b.onClick && b.onClick());
+      modalFoot.appendChild(btn);
+    });
+
+    backdrop.hidden = false;
+    if (opts.onOpen) opts.onOpen();
+    const first = modalBody.querySelector('input,textarea,select,button') || $('#modalClose');
+    setTimeout(() => first.focus(), 30);
+  }
+
+  function closeModal() {
+    backdrop.hidden = true;
+    modalBody.innerHTML = '';
+    modalFoot.innerHTML = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  $('#modalClose').addEventListener('click', closeModal);
+  backdrop.addEventListener('mousedown', (e) => { if (e.target === backdrop) closeModal(); });
+
+  document.addEventListener('keydown', (e) => {
+    if (backdrop.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
+    if (e.key !== 'Tab') return;
+    // Piège à focus : on boucle à l'intérieur de la modale.
+    const f = $$('button,input,select,textarea,[href]', backdrop).filter((x) => !x.disabled && x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  /** Boîte de confirmation stylée (remplace window.confirm). */
+  function confirmDialog(title, text) {
+    return new Promise((resolve) => {
+      openModal({
+        title: title,
+        body: '<p>' + esc(text || '') + '</p>',
+        buttons: [
+          { label: 'Annuler', cls: 'ghost', onClick: () => { closeModal(); resolve(false); } },
+          { label: 'Confirmer', cls: 'primary', onClick: () => { closeModal(); resolve(true); } }
+        ]
+      });
+    });
+  }
+
+  /** Modale d'édition d'un résultat : nom, description, catégorie. */
+  function openEditModal(id) {
+    const r = resById(id);
+    if (!r) return;
+    const opts = state.categories
+      .map((c) => '<option value="' + esc(c.id) + '"' + (c.id === r.cat ? ' selected' : '') + '>' + esc(c.name) + '</option>')
+      .join('');
+
+    openModal({
+      title: 'Modifier le résultat',
+      body: '<label class="field"><span>Nom *</span><input class="input" id="eName" maxlength="60" value="' + esc(r.name) + '"></label>'
+          + '<label class="field"><span>Description / définition</span><textarea class="input" id="eDesc" maxlength="240">' + esc(r.desc) + '</textarea></label>'
+          + '<label class="field"><span>Catégorie</span><select class="input" id="eCat">' + opts + '</select></label>',
+      buttons: [
+        { label: 'Annuler', cls: 'ghost', onClick: closeModal },
+        { label: 'Enregistrer', cls: 'primary', onClick: () => {
+            const name = $('#eName').value.trim();
+            if (!name) { $('#eName').focus(); toast('Le nom est obligatoire.'); return; }
+            r.name = name;
+            r.desc = $('#eDesc').value.trim();
+            r.cat = $('#eCat').value;
+            if (state.last && state.last.id === r.id) { state.last.name = r.name; state.last.desc = r.desc; }
+            save(); closeModal(); renderGestion(); renderWheel(); renderResult(false); renderResultDot();
+            toast('Résultat mis à jour.');
+          } }
+      ]
+    });
+  }
+
+  /* --- Notifications éphémères --- */
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+  }
+
+  /* --- Export --- */
+  function exportPayload() {
+    return JSON.stringify({
+      app: 'roue-de-fortune',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      categories: state.categories,
+      results: state.results
+    }, null, 2);
+  }
+
+  $('#btnExport').addEventListener('click', () => {
+    const json = exportPayload();
+    openModal({
+      title: 'Exporter la configuration',
+      body: '<p>Copiez ce JSON ou téléchargez-le pour le recharger plus tard, ou sur un autre appareil.</p>'
+          + '<textarea class="input" id="expArea" readonly style="min-height:190px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px">' + esc(json) + '</textarea>',
+      buttons: [
+        { label: 'Fermer', cls: 'ghost', onClick: closeModal },
+        { label: 'Copier', onClick: () => {
+            const ta = $('#expArea');
+            ta.select(); ta.setSelectionRange(0, ta.value.length);
+            const done = () => toast('JSON copié dans le presse-papiers.');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(ta.value).then(done, () => { try { document.execCommand('copy'); done(); } catch (e) { toast('Copie impossible : sélectionnez le texte.'); } });
+            } else {
+              try { document.execCommand('copy'); done(); } catch (e) { toast('Copie impossible : sélectionnez le texte.'); }
+            }
+          } },
+        { label: 'Télécharger', cls: 'primary', onClick: () => {
+            try {
+              const blob = new Blob([json], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'roue-' + new Date().toISOString().slice(0, 10) + '.json';
+              document.body.appendChild(a); a.click(); a.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch (e) { toast('Téléchargement indisponible ici : utilisez « Copier ».'); }
+          } }
+      ]
+    });
+  });
+
+  /* --- Import (fichier ou copier-coller) --- */
+  function applyImport(raw, mode) {
+    let data;
+    try { data = JSON.parse(raw); }
+    catch (e) { toast('JSON invalide.'); return; }
+
+    const clean = sanitize({
+      categories: data.categories, results: data.results,
+      skin: state.skin, dark: state.dark, sound: state.sound
+    });
+    if (!clean || !clean.categories.length) { toast('Aucune catégorie exploitable dans ce fichier.'); return; }
+
+    if (mode === 'replace') {
+      state.categories = clean.categories;
+      state.results = clean.results;
+      state.last = null;
+      state.history = [];
+      state.stats = { total: 0, counts: {} };
+    } else {
+      // Fusion : les catégories de même nom sont réutilisées, les identifiants remappés.
+      const map = {};
+      clean.categories.forEach((c) => {
+        const exist = state.categories.find((x) => x.name.toLowerCase() === c.name.toLowerCase());
+        if (exist) { map[c.id] = exist.id; }
+        else { const nc = { id: uid(), name: c.name, color: c.color, collapsed: false }; state.categories.push(nc); map[c.id] = nc.id; }
+      });
+      clean.results.forEach((r) => {
+        const cat = map[r.cat];
+        if (!cat) return;
+        const dup = state.results.some((x) => x.cat === cat && x.name.toLowerCase() === r.name.toLowerCase());
+        if (!dup) state.results.push({ id: uid(), name: r.name, desc: r.desc, cat: cat, active: r.active });
+      });
+    }
+
+    save(); closeModal(); renderGestion(); renderWheel(); renderResult(false); renderHistory();
+    toast(mode === 'replace' ? 'Configuration remplacée.' : 'Configuration fusionnée.');
+  }
+
+  $('#btnImport').addEventListener('click', () => {
+    openModal({
+      title: 'Importer une configuration',
+      body: '<p>Choisissez un fichier JSON exporté depuis cette application, ou collez son contenu ci-dessous.</p>'
+          + '<button class="btn" id="pickFile" type="button">Choisir un fichier…</button>'
+          + '<textarea class="input" id="impArea" placeholder="{ &quot;categories&quot;: [...], &quot;results&quot;: [...] }" style="min-height:150px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"></textarea>',
+      buttons: [
+        { label: 'Annuler', cls: 'ghost', onClick: closeModal },
+        { label: 'Fusionner', onClick: () => applyImport($('#impArea').value, 'merge') },
+        { label: 'Remplacer', cls: 'primary', onClick: () => applyImport($('#impArea').value, 'replace') }
+      ],
+      onOpen: () => {
+        $('#pickFile').addEventListener('click', () => $('#fileInput').click());
+      }
+    });
+  });
+
+  $('#fileInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = () => { const ta = $('#impArea'); if (ta) { ta.value = String(fr.result); toast('Fichier chargé : choisissez Fusionner ou Remplacer.'); } };
+    fr.onerror = () => toast('Lecture du fichier impossible.');
+    fr.readAsText(file);
+    e.target.value = '';
+  });
+
+  /* --- Réinitialisation --- */
+  $('#btnReset').addEventListener('click', async () => {
+    const ok = await confirmDialog('Tout réinitialiser ?',
+      'Catégories, résultats, historique et statistiques reviendront aux valeurs par défaut. Le style choisi est conservé.');
+    if (!ok) return;
+    const skin = state.skin, dark = state.dark, sound = state.sound;
+    state = defaultState();
+    state.skin = skin; state.dark = dark; state.sound = sound;
+    save(); renderGestion(); renderWheel(); renderResult(false); renderHistory();
+    toast('Application réinitialisée.');
+  });
+
+  /* == G. Effets & démarrage ============================================== */
+
+  /* --- Sons discrets (Web Audio, aucun fichier externe) --- */
+  let actx = null;
+  function audioCtx() {
+    if (!state.sound) return null;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!actx) actx = new AC();
+      if (actx.state === 'suspended') actx.resume();
+      return actx;
+    } catch (e) { return null; }
+  }
+
+  function blip(freq, dur, vol, type) {
+    const c = audioCtx();
+    if (!c) return;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'square';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), c.currentTime + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(); o.stop(c.currentTime + dur + 0.02);
+  }
+
+  function playTick(intensity) { blip(1000 + Math.random() * 220, 0.05, 0.035 * clamp(intensity, 0.18, 1), 'square'); }
+  function playWin() {
+    [0, 90, 180].forEach((d, i) => setTimeout(() => blip([523.25, 659.25, 783.99][i], 0.22, 0.07, 'triangle'), d));
+  }
+
+  /* --- Confettis (canvas, ~1,6 s puis arrêt complet) --- */
+  const cvs = $('#confetti');
+  const ctx = cvs.getContext ? cvs.getContext('2d') : null;
+  let confettiRaf = null;
+
+  function confetti(color) {
+    if (reduceMotion || !ctx) return;
+    cancelAnimationFrame(confettiRaf);
+
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = window.innerWidth, h = window.innerHeight;
+    cvs.width = w * dpr; cvs.height = h * dpr;
+    cvs.style.width = w + 'px'; cvs.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cvs.hidden = false;
+
+    const tints = [color, shade(color, 0.35), shade(color, -0.25), '#f2b705', '#ffffff'];
+    const parts = [];
+    for (let i = 0; i < 90; i++) {
+      parts.push({
+        x: w / 2 + (Math.random() - 0.5) * w * 0.35,
+        y: h * 0.42 + (Math.random() - 0.5) * 40,
+        vx: (Math.random() - 0.5) * 9,
+        vy: -6 - Math.random() * 8,
+        s: 4 + Math.random() * 5,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.3,
+        c: tints[i % tints.length]
+      });
+    }
+
+    const t0 = performance.now();
+    function frame(now) {
+      const t = (now - t0) / 1600;
+      ctx.clearRect(0, 0, w, h);
+      if (t >= 1) { cvs.hidden = true; return; }
+      ctx.globalAlpha = t > 0.75 ? (1 - t) / 0.25 : 1;
+      for (const p of parts) {
+        p.vy += 0.34; p.x += p.vx; p.y += p.vy; p.vx *= 0.995; p.rot += p.vr;
+        ctx.save();
+        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+        ctx.restore();
+      }
+      confettiRaf = requestAnimationFrame(frame);
+    }
+    confettiRaf = requestAnimationFrame(frame);
+  }
+
+  /* --- Démarrage --- */
+  save();          // fige l'état initial (identifiants stables des données d'exemple)
+  applyTheme();
+  renderWheel();
+  renderResult(false);
+  renderHistory();
+  renderGestion();
+  selectTab('roue');
+
+  // La roue s'adapte aux changements d'orientation / de taille sans recalcul lourd.
+  window.addEventListener('orientationchange', () => setTimeout(renderWheel, 250));
+})();
+</script>
+</body>
+</html>
